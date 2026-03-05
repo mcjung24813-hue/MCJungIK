@@ -15,10 +15,14 @@ st.set_page_config(layout="wide", page_title="Factory OS - Cloud DB")
 # 🔒 관리자 비밀번호 설정
 ADMIN_PASSWORD = "1234"
 
+# -------------------------------------------------------------
+# [매우 중요!] 아래 따옴표 안에 본인의 구글 시트 ID를 복사해서 넣으세요.
+SHEET_ID = '1gDcLsO5PBfpG_9JCAWOWol_gJgubRU90STsZHGv9hq4' 
+# -------------------------------------------------------------
+
 # --- 💡 구글 시트 데이터베이스 연동 함수 ---
 def get_gspread_client():
     scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-    # 스트림릿 비밀 금고에서 GOOGLE_KEY를 꺼내옵니다.
     creds_dict = json.loads(st.secrets["GOOGLE_KEY"])
     creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
     return gspread.authorize(creds)
@@ -26,7 +30,8 @@ def get_gspread_client():
 def load_machine_data():
     try:
         client = get_gspread_client()
-        sheet = client.open("Factory_OS_DB").worksheet("Machine_DB")
+        sh = client.open_by_key(SHEET_ID)
+        sheet = sh.worksheet("Machine_DB")
         data_list = sheet.get_all_values()
         if len(data_list) <= 1: return {}
         return {row[0]: json.loads(row[1]) for row in data_list[1:] if len(row) >= 2}
@@ -36,7 +41,8 @@ def load_machine_data():
 def save_machine_data(data):
     try:
         client = get_gspread_client()
-        sheet = client.open("Factory_OS_DB").worksheet("Machine_DB")
+        sh = client.open_by_key(SHEET_ID)
+        sheet = sh.worksheet("Machine_DB")
         rows = [["Key", "Value"]] + [[str(k), json.dumps(v)] for k, v in data.items()]
         sheet.clear()
         sheet.update(values=rows, range_name="A1")
@@ -46,7 +52,8 @@ def save_machine_data(data):
 def load_master_data():
     try:
         client = get_gspread_client()
-        sheet = client.open("Factory_OS_DB").worksheet("Master_DB")
+        sh = client.open_by_key(SHEET_ID)
+        sheet = sh.worksheet("Master_DB")
         data_list = sheet.get_all_values()
         if len(data_list) <= 1: return {}
         return {row[0]: json.loads(row[1]) for row in data_list[1:] if len(row) >= 2}
@@ -56,7 +63,8 @@ def load_master_data():
 def save_master_data(data):
     try:
         client = get_gspread_client()
-        sheet = client.open("Factory_OS_DB").worksheet("Master_DB")
+        sh = client.open_by_key(SHEET_ID)
+        sheet = sh.worksheet("Master_DB")
         rows = [["Key", "Value"]] + [[str(k), json.dumps(v)] for k, v in data.items()]
         sheet.clear()
         sheet.update(values=rows, range_name="A1")
