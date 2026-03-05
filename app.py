@@ -500,8 +500,9 @@ with st.sidebar:
 # 폰과 PC가 서로의 정보를 무시하지 않도록,
 # 무조건 DB에서 최신 정보를 끌어와서 덮어쓰도록 설계했습니다.
 if auto_refresh:
-    time.sleep(30.0)
+    time.sleep(10.0)
     st.session_state.m_states = load_machine_data()
     st.session_state.master_data = load_master_data()
     st.rerun()
+
 
