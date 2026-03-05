@@ -17,7 +17,7 @@ ADMIN_PASSWORD = "1234"
 
 # -------------------------------------------------------------
 # [매우 중요!] 아래 따옴표 안에 본인의 구글 시트 ID를 복사해서 넣으세요.
-SHEET_ID = '1gDcLsO5PBfpG_9JCAWOWol_gJgubRU90STsZHGv9hq4' 
+SHEET_ID = '여기에_본인의_구글_시트_ID를_넣으세요' 
 # -------------------------------------------------------------
 
 # --- 💡 구글 시트 데이터베이스 연동 함수 ---
@@ -47,7 +47,8 @@ def save_machine_data(data):
         sheet.clear()
         sheet.update(values=rows, range_name="A1")
     except Exception as e:
-        pass
+        st.error(f"🚨 기계 DB 저장 에러: {e}")
+        st.stop()
 
 def load_master_data():
     try:
@@ -68,8 +69,9 @@ def save_master_data(data):
         rows = [["Key", "Value"]] + [[str(k), json.dumps(v)] for k, v in data.items()]
         sheet.clear()
         sheet.update(values=rows, range_name="A1")
-    except:
-        pass
+    except Exception as e:
+        st.error(f"🚨 마스터 DB 저장 에러: {e}")
+        st.stop()
 
 def clear_widget_state(m_name=None):
     if m_name:
@@ -163,10 +165,6 @@ if not st.session_state.m_states:
 
 if 'selected_machine' not in st.session_state:
     st.session_state.selected_machine = None
-
-with st.sidebar:
-    st.markdown("### ⚙️ 시스템 설정")
-    auto_refresh = st.checkbox("실시간 자동 새로고침 켜기", value=True)
 
 def render_details_panel(m_name, m):
     target_val = int(m.get('target', 0))
@@ -278,6 +276,8 @@ def make_machine_card(m_name):
             added = int(elapsed // cycle)
             m['count'] = int(m.get('count', 0)) + added
             m['last_time'] = float(m.get('last_time', now)) + (added * cycle)
+            # 카운트가 올라갔을 때만 DB 저장
+            save_machine_data(st.session_state.m_states)
 
     if int(m.get('target', 0)) > 0 and int(m.get('count', 0)) >= int(m.get('target', 0)):
         m['count'] = int(m.get('target', 0)); m['is_running'] = False  
@@ -485,5 +485,22 @@ with t_admin:
             st.write("---"); del_m_name = st.selectbox("철거/삭제할 기계 선택", list(st.session_state.m_states.keys()))
             if st.button("선택 기계 영구 삭제"): del st.session_state.m_states[del_m_name]; save_machine_data(st.session_state.m_states); st.success("철거 완료!"); time.sleep(1); st.rerun()
 
-save_machine_data(st.session_state.m_states)
-if auto_refresh: time.sleep(60.0); st.rerun()
+
+# --- 사이드바 및 동기화/새로고침 처리 ---
+with st.sidebar:
+    st.markdown("### ⚙️ 시스템 설정")
+    auto_refresh = st.checkbox("실시간 자동 새로고침 켜기", value=True)
+    st.markdown("---")
+    st.info("💡 PC ↔ 폰 상태가 다를 때 눌러주세요.")
+    if st.button("🔄 최신 데이터 동기화 (Sync)"):
+        st.session_state.m_states = load_machine_data()
+        st.session_state.master_data = load_master_data()
+        st.rerun()
+
+# 폰과 PC가 서로의 정보를 무시하지 않도록,
+# 무조건 DB에서 최신 정보를 끌어와서 덮어쓰도록 설계했습니다.
+if auto_refresh:
+    time.sleep(30.0)
+    st.session_state.m_states = load_machine_data()
+    st.session_state.master_data = load_master_data()
+    st.rerun()
