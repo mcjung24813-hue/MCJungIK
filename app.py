@@ -17,7 +17,7 @@ ADMIN_PASSWORD = "1234"
 
 # -------------------------------------------------------------
 # [매우 중요!] 아래 따옴표 안에 본인의 구글 시트 ID를 복사해서 넣으세요.
-SHEET_ID = '여기에_본인의_구글_시트_ID를_넣으세요' 
+SHEET_ID = '1gDcLsO5PBfpG_9JCAWOWol_gJgubRU90STsZHGv9hq4' 
 # -------------------------------------------------------------
 
 # --- 💡 구글 시트 데이터베이스 연동 함수 ---
@@ -504,3 +504,4 @@ if auto_refresh:
     st.session_state.m_states = load_machine_data()
     st.session_state.master_data = load_master_data()
     st.rerun()
+
