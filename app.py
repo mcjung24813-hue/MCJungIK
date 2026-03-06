@@ -45,6 +45,10 @@ LANG_DICT = {
     "스마트 공정 계획표 (엑셀 뷰)": "スマート工程計画表 (Excel View)",
     "☑️ 완료된 공정 기록 숨기기 (진행/예정 항목만 앞으로 당겨서 보기)": "☑️ 完了した工程記録を隠す (進行/予定項目のみ表示)",
     "✨ 표 오른쪽의 빈칸을 더블클릭하고 **완제품코드 또는 부품코드**를 입력 후 엔터를 치면 일정이 쏙 들어갑니다! (수량 지정: `코드/수량`)": "✨ 表の右側の空白をダブルクリックし、**完成品コードまたは部品コード**を入力してEnterを押すと日程が追加されます！ (数量指定: `コード/数量`)",
+    "💡 일정이나 기록을 삭제하려면 칸의 글씨를 전부 지우고(백스페이스) 아래의 [저장] 버튼을 누르세요!": "💡 日程や記録を削除するには、マスの文字を全て消して下の[保存]ボタンを押してください！",
+    "💾 공정계획표 변경사항 저장 및 적용": "💾 工程計画表の変更を保存・適用",
+    "✅ 성공적으로 저장되었습니다!": "✅ 正常に保存されました！",
+    "변경된 내용이 없습니다.": "変更された内容がありません。",
     "✅ 일정이 자동 추가되었습니다!": "✅ 日程が自動追加されました！",
     "로그인": "ログイン", "🔓 로그아웃": "🔓 ログアウト", "제품명 (필수)": "製品名 (必須)",
     "제품 적용하기": "製品適用", "기계 추가하기": "機械追加", "선택 기계 영구 삭제": "選択機械の完全削除",
@@ -57,7 +61,7 @@ LANG_DICT = {
     "➕ 새 기계 라인 추가": "➕ 新しい機械ラインの追加", "Password": "パスワード",
     "📋 제품 목록 (Product List)": "📋 製品リスト (Product List)",
     "📦 Master Data": "📦 マスターデータ (Master Data)",
-    "완료": "完了", "완": "完", "부": "部",
+    "완료": "完了", "예정": "予定", "완": "完", "부": "部",
     "🔒 데이터를 수정하려면 관리자 권한이 필요합니다.": "🔒 データを修正するには管理者権限が必要です。"
 }
 
@@ -154,7 +158,6 @@ display: none !important; opacity: 0 !important; visibility: hidden !important;
 
 /* 📱 모바일 강제 2열 최적화 (버튼 박스 깨짐 완벽 방지) */
 @media (max-width: 768px) {
-    /* .grid-marker가 포함된 최외곽 컬럼만 강제 2열 적용! (내부 버튼이나 설정창은 보호) */
     div[data-testid="stHorizontalBlock"]:has(.grid-marker) {
         flex-direction: row !important;
         flex-wrap: nowrap !important;
@@ -164,8 +167,6 @@ display: none !important; opacity: 0 !important; visibility: hidden !important;
         width: 50% !important;
         min-width: 50% !important;
     }
-    
-    /* 모바일에서 글씨 크기 자연스럽게 축소 */
     .machine-title { font-size: 15px !important; margin-bottom: 5px !important; }
     .status-container { padding: 2px 6px !important; }
     .status-text { font-size: 10px !important; }
@@ -173,7 +174,7 @@ display: none !important; opacity: 0 !important; visibility: hidden !important;
     .modern-metric { padding: 6px !important; min-width: 45px !important; }
     .metric-value { font-size: 14px !important; }
     .metric-label { font-size: 9px !important; margin-bottom: 2px !important; }
-    span[style*="font-size:14px"] { font-size: 10px !important; } /* 제품/부품 코드 폰트 조절 */
+    span[style*="font-size:14px"] { font-size: 10px !important; }
     .stButton>button { padding: 2px 4px !important; font-size: 12px !important; min-height: 35px !important; }
 }
 </style>
@@ -305,7 +306,6 @@ def render_unified_machine_card(m_name):
         </div>
         """, unsafe_allow_html=True)
 
-        # 💡 핵심 수정 파트: 버튼이 좁아터지지 않게 2개/1개 구조로 변경했습니다!
         c_btn1, c_btn2 = st.columns(2)
         if target_val > 0 and count_val >= target_val:
             with c_btn1:
@@ -336,7 +336,6 @@ def render_unified_machine_card(m_name):
                 if st.button(_("⏸️ STOP"), key=f"stop_{m_name}", use_container_width=True):
                     m['is_running'] = False; save_machine_data(st.session_state.m_states); st.rerun()
         
-        # 더보기 버튼은 길고 시원하게 맨 밑에 1줄 전체를 쓰도록 배치!
         btn_text = _("🔼 닫기") if is_open else _("🔽 더보기")
         if st.button(btn_text, key=f"det_toggle_{m_name}", use_container_width=True):
             if is_open: st.session_state.selected_machine = None
@@ -366,7 +365,6 @@ def render_unified_machine_card(m_name):
             with col_t: new_target = st.number_input(_("목표 수량"), min_value=1, value=int(m.get('target', 1000)), key=f"det_t_{m_name}")
             with col_c: new_count = st.number_input(_("현재 생산량"), min_value=0, value=int(m.get('count', 0)), key=f"det_c_{m_name}")
             
-            # 상세 설정 안쪽의 버튼들도 세로로 넓게 쓰도록 분리 (폰 환경 완벽 대응)
             st.markdown("<br>", unsafe_allow_html=True)
             if st.button(_("설정 적용"), key=f"det_upd_p_{m_name}", use_container_width=True):
                 m['p_name'] = selected_p_name; m['target'] = new_target; m['count'] = new_count if new_count <= new_target else new_target; m['last_time'] = time.time()
@@ -420,7 +418,6 @@ def render_unified_machine_card(m_name):
                             save_machine_data(st.session_state.m_states); time.sleep(1); st.rerun()
                 if st.button(_("🗑️ 모두 지우기"), key=f"clear_hist_{m_name}", use_container_width=True): m['history'] = []; save_machine_data(st.session_state.m_states); st.rerun()
 
-
 # --- 사이드바 번역 설정 ---
 with st.sidebar:
     st.markdown(f"### ⚙️ {_('시스템 설정')}")
@@ -473,7 +470,6 @@ with t1:
         
         c1, c2 = st.columns(2)
         with c1:
-            # 💡 정밀 타겟팅 CSS를 위한 숨김 마커 추가! (버튼 깨짐 방지용)
             st.markdown("<span class='grid-marker'></span>", unsafe_allow_html=True)
             if real_left_m: render_unified_machine_card(real_left_m)
         with c2:
@@ -500,10 +496,12 @@ with t3:
         st.markdown("<span class='grid-marker'></span>", unsafe_allow_html=True)
         for m_name in f3_machines[mid3:]: render_unified_machine_card(m_name)
 
+# --- 💡 공정계획표 탭 (마스터 삭제/저장 기능 적용) ---
 with t_plan:
     st.subheader(f"📅 {_('스마트 공정 계획표 (엑셀 뷰)')}")
     hide_history = st.checkbox(_("☑️ 완료된 공정 기록 숨기기 (진행/예정 항목만 앞으로 당겨서 보기)"), value=True)
     st.info(_("✨ 표 오른쪽의 빈칸을 더블클릭하고 **완제품코드 또는 부품코드**를 입력 후 엔터를 치면 일정이 쏙 들어갑니다! (수량 지정: `코드/수량`)"))
+    st.warning(_("💡 일정이나 기록을 삭제하려면 칸의 글씨를 전부 지우고(백스페이스) 아래의 [저장] 버튼을 누르세요!"))
     
     def build_table_data(machines_list, hide_hist):
         max_cols = 0; raw_table_data = []
@@ -516,7 +514,7 @@ with t_plan:
                 status_text = f"🔄[{_('생산중')}]" if m.get('is_running', False) else f"⏸️[{_('대기중')}]"
                 if int(m.get('count', 0)) >= int(m.get('target', 1)): status_text = f"✅[{_('생산완료')}]"
                 tasks.append(f"{status_text} {curr_p} ({int(m.get('count',0))}/{m.get('target')}EA)")
-            for sch in m.get('schedule', []): tasks.append(f"⏳[예정] {sch['p_name']} ({sch['target']}EA)")
+            for sch in m.get('schedule', []): tasks.append(f"⏳[{_('예정')}] {sch['p_name']} ({sch['target']}EA)")
             max_cols = max(max_cols, len(tasks)); raw_table_data.append({"기계명": m_name, "tasks": tasks})
             
         display_cols = max_cols + 3; df_list = []
@@ -534,38 +532,87 @@ with t_plan:
     df_f3, cols_f3 = build_table_data(f3_machines, hide_history)
     edited_df_f3 = st.data_editor(df_f3, use_container_width=True, hide_index=True, key="editor_f3")
     
-    changes_made = False
-    for e_df, d_cols in [(edited_df_f1, cols_f1), (edited_df_f3, cols_f3)]:
-        for idx, row in e_df.iterrows():
-            m_name = str(row.get(_('기계명'), ''))
-            if m_name not in st.session_state.m_states: continue
-            m = st.session_state.m_states[m_name]
-            for i in range(d_cols):
-                col_name = f"{i+1}{_('순서')}"
-                if col_name not in row: continue
-                cell_val = str(row[col_name]).strip()
-                if cell_val != "" and not any(marker in cell_val for marker in ["✅", "🔄", "⏸️", "⏳"]):
-                    typed_str = cell_val; target_qty = 1000 
-                    if "/" in typed_str:
-                        parts = typed_str.split("/"); typed_str = parts[0].strip()
-                        try: target_qty = int(parts[1].strip())
-                        except: pass
+    # 💡 한 번에 전체를 분석해서 삭제와 추가를 동시에 처리하는 강력한 저장 버튼!
+    if st.button(_("💾 공정계획표 변경사항 저장 및 적용"), use_container_width=True):
+        def process_df(e_df, m_list):
+            changes = False
+            for idx, row in e_df.iterrows():
+                m_name = str(row.get(_('기계명'), ''))
+                if m_name not in st.session_state.m_states: continue
+                m = st.session_state.m_states[m_name]
+                
+                # 표에 남아있는 글씨들만 긁어모읍니다 (지운 칸은 제외됨)
+                edited_cells = [str(row[col]).strip() for col in e_df.columns if col != _('기계명') and str(row[col]).strip() != ""]
+                
+                # 1. 완료 기록 삭제 확인 (숨기기 모드가 아닐 때만 작동)
+                if not hide_history:
+                    kept_history = []
+                    for h in m.get('history', []):
+                        h_str = f"✅[{_('완료')}] {h['p_name']} ({h['count']}EA)"
+                        if h_str in edited_cells:
+                            kept_history.append(h)
+                            edited_cells.remove(h_str)
+                    if len(kept_history) != len(m.get('history', [])): changes = True
+                    m['history'] = kept_history
                     
-                    matched_p_name = None
-                    for p, info in st.session_state.master_data.items():
-                        if info.get('p_code') == typed_str or info.get('p_part_code') == typed_str: 
-                            matched_p_name = p; break
-                            
-                    if not matched_p_name and typed_str in st.session_state.master_data: matched_p_name = typed_str
-                    final_p_name = matched_p_name if matched_p_name else typed_str
+                # 2. 현재 작업 삭제 확인
+                curr_p = m.get('p_name', '---')
+                if curr_p != '---':
+                    status_text = f"🔄[{_('생산중')}]" if m.get('is_running', False) else f"⏸️[{_('대기중')}]"
+                    if int(m.get('count', 0)) >= int(m.get('target', 1)): status_text = f"✅[{_('생산완료')}]"
+                    c_str = f"{status_text} {curr_p} ({int(m.get('count',0))}/{m.get('target')}EA)"
                     
-                    if m.get('p_name', '---') == '---': m.update({'p_name': final_p_name, 'target': target_qty, 'count': 0, 'is_running': False, 'last_time': time.time()}); clear_widget_state(m_name)
+                    if c_str in edited_cells:
+                        edited_cells.remove(c_str)
                     else:
-                        if 'schedule' not in m: m['schedule'] = []
-                        m['schedule'].append({'p_name': final_p_name, 'target': target_qty, 'date': time.strftime("%Y-%m-%d")})
-                    changes_made = True
-
-    if changes_made: save_machine_data(st.session_state.m_states); st.success(_("✅ 일정이 자동 추가되었습니다!")); time.sleep(1); st.rerun()
+                        m['p_name'] = "---"; m['target'] = 1000; m['count'] = 0; m['is_running'] = False
+                        changes = True
+                        
+                # 3. 대기열(예정) 삭제 확인
+                kept_schedule = []
+                for sch in m.get('schedule', []):
+                    s_str = f"⏳[{_('예정')}] {sch['p_name']} ({sch['target']}EA)"
+                    if s_str in edited_cells:
+                        kept_schedule.append(sch)
+                        edited_cells.remove(s_str)
+                if len(kept_schedule) != len(m.get('schedule', [])): changes = True
+                m['schedule'] = kept_schedule
+                
+                # 4. 새롭게 추가된 작업들 등록 (코드 치고 엔터친 부분)
+                for cell_val in edited_cells:
+                    if not any(marker in cell_val for marker in ["✅", "🔄", "⏸️", "⏳"]):
+                        typed_str = cell_val; target_qty = 1000 
+                        if "/" in typed_str:
+                            parts = typed_str.split("/")
+                            typed_str = parts[0].strip()
+                            try: target_qty = int(parts[1].strip())
+                            except: pass
+                            
+                        matched_p_name = None
+                        for p, info in st.session_state.master_data.items():
+                            if info.get('p_code') == typed_str or info.get('p_part_code') == typed_str: 
+                                matched_p_name = p; break
+                        final_p_name = matched_p_name if matched_p_name else typed_str
+                        
+                        if m.get('p_name', '---') == '---': 
+                            m.update({'p_name': final_p_name, 'target': target_qty, 'count': 0, 'is_running': False, 'last_time': time.time()})
+                            clear_widget_state(m_name)
+                        else:
+                            if 'schedule' not in m: m['schedule'] = []
+                            m['schedule'].append({'p_name': final_p_name, 'target': target_qty, 'date': time.strftime("%Y-%m-%d")})
+                        changes = True
+            return changes
+            
+        c1_changed = process_df(edited_df_f1, f1_machines)
+        c3_changed = process_df(edited_df_f3, f3_machines)
+        
+        if c1_changed or c3_changed:
+            save_machine_data(st.session_state.m_states)
+            st.success(_("✅ 성공적으로 저장되었습니다!"))
+            time.sleep(1)
+            st.rerun()
+        else:
+            st.info(_("변경된 내용이 없습니다."))
 
 with t_admin:
     st.subheader(f"⚙️ {_('시스템 설정')}")
@@ -592,12 +639,12 @@ with t_admin:
             
             col_m4, col_m5, col_m6 = st.columns(3)
             with col_m4: a_p_color = st.text_input(_("컬러 텍스트 (예: 투명)"))
-            with col_m5: a_p_weight = st.number_input(_("무게(g)"), min_value=0.0, value=0.0, step=0.1)
+            with col_m5: a_p_number = st.number_input(_("무게(g)"), min_value=0.0, value=0.0, step=0.1)
             with col_m6: a_p_cycle = st.number_input(_("사이클(초)"), min_value=0, value=10)
             
             if st.button(_("제품 적용하기")):
                 if a_p_name.strip(): 
-                    st.session_state.master_data[a_p_name] = {"p_code": a_p_code, "p_part_code": a_p_part_code, "color_text": a_p_color, "weight": a_p_weight, "cycle_time": a_p_cycle}
+                    st.session_state.master_data[a_p_name] = {"p_code": a_p_code, "p_part_code": a_p_part_code, "color_text": a_p_color, "weight": a_p_number, "cycle_time": a_p_cycle}
                     save_master_data(st.session_state.master_data)
                     st.success("OK")
                     time.sleep(1)
