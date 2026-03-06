@@ -66,7 +66,7 @@ def _(text):
         return LANG_DICT.get(text, text)
     return text
 
-# --- 💡 구글 시트 데이터베이스 연동 함수 ---
+# --- 💡 구글 시트 연동 ---
 def get_gspread_client():
     scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
     creds_dict = json.loads(st.secrets["GOOGLE_KEY"])
@@ -81,8 +81,7 @@ def load_machine_data():
         data_list = sheet.get_all_values()
         if len(data_list) <= 1: return {}
         return {row[0]: json.loads(row[1]) for row in data_list[1:] if len(row) >= 2}
-    except Exception as e:
-        return {}
+    except Exception as e: return {}
 
 def save_machine_data(data):
     try:
@@ -104,8 +103,7 @@ def load_master_data():
         data_list = sheet.get_all_values()
         if len(data_list) <= 1: return {}
         return {row[0]: json.loads(row[1]) for row in data_list[1:] if len(row) >= 2}
-    except:
-        return {}
+    except: return {}
 
 def save_master_data(data):
     try:
@@ -124,7 +122,7 @@ def clear_widget_state(m_name=None):
         for k in [f"det_p_{m_name}", f"det_t_{m_name}", f"det_c_{m_name}", f"det_memo_{m_name}"]:
             if k in st.session_state: del st.session_state[k]
 
-# --- 1. CSS 디자인 ---
+# --- 1. CSS 디자인 (모바일 강제 2열 최적화 추가) ---
 st.markdown("""
 <style>
 .stApp, .stApp > div, [data-testid="stAppViewContainer"], [data-testid="stMain"], [data-testid="stAppViewBlockContainer"], [data-testid="stMainBlockContainer"] {
@@ -153,6 +151,32 @@ display: none !important; opacity: 0 !important; visibility: hidden !important;
 .time-value { color: #ff3b30 !important; }
 .schedule-item { background: #fbfbfd; border: 1px solid #e5e5ea; padding: 10px; margin-bottom: 6px; border-radius: 10px; font-size: 13px; font-weight: 500;}
 .history-item { background: #fbfbfd; border: 1px solid #e5e5ea; padding: 10px; margin-bottom: 6px; border-radius: 10px; font-size: 13px; color: #86868b; }
+
+/* 📱 핵심 모바일(스마트폰) 강제 2열 배치 CSS */
+@media (max-width: 768px) {
+    /* 좌우 컬럼을 감싸는 박스가 세로로 꺾이지 않도록 강제 유지 */
+    div[data-testid="stHorizontalBlock"] {
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
+        gap: 0.3rem !important;
+    }
+    /* 컬럼 각각이 화면의 절반(50%)을 차지하도록 설정 */
+    div[data-testid="column"] {
+        width: 50% !important;
+        flex: 1 1 50% !important;
+        min-width: 50% !important;
+    }
+    /* 폰화면에 맞게 글씨와 패딩 축소 */
+    .machine-title { font-size: 15px !important; margin-bottom: 5px !important; }
+    .status-text { font-size: 11px !important; }
+    .status-container { padding: 2px 8px !important; }
+    .card-product { font-size: 14px !important; }
+    .modern-metric { padding: 8px !important; min-width: 50px !important; }
+    .metric-value { font-size: 14px !important; }
+    .metric-label { font-size: 9px !important; margin-bottom: 2px !important; }
+    .stButton>button { padding: 2px 4px !important; font-size: 12px !important; min-height: 32px !important; }
+    span[style*="font-size:14px"] { font-size: 11px !important; } /* 제품/부품 코드 작게 */
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -257,7 +281,7 @@ def render_unified_machine_card(m_name):
     if m.get('schedule'):
         next_p = m['schedule'][0]['p_name']
         n_color = st.session_state.master_data.get(next_p, {}).get("color_text", "미지정")
-        next_color_html = f"<div class='next-color-tag'>⏭️ NEXT カラー: {n_color}</div>"
+        next_color_html = f"<div class='next-color-tag'>⏭️ NEXT 컬러: {n_color}</div>"
 
     raw_memo = m.get('memo', ''); memo_text = str(raw_memo).strip() if pd.notna(raw_memo) and str(raw_memo).lower() != 'nan' else ''
     memo_html = f"<div class='card-memo'>📌 {memo_text}</div>" if memo_text else ""
@@ -392,7 +416,6 @@ def render_unified_machine_card(m_name):
                                 st.success(_("대기열 추가 완료"))
                             save_machine_data(st.session_state.m_states); time.sleep(1); st.rerun()
                 if st.button(_("🗑️ 모두 지우기"), key=f"clear_hist_{m_name}", use_container_width=True): m['history'] = []; save_machine_data(st.session_state.m_states); st.rerun()
-
 
 # --- 사이드바 번역 설정 ---
 with st.sidebar:
