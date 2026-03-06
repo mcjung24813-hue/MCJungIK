@@ -96,8 +96,8 @@ display: none !important; opacity: 0 !important; visibility: hidden !important;
 .status-running { background-color: #007aff; } .text-running { color: #007aff; font-size: 13px; font-weight: 700; }
 .status-waiting { background-color: #ff3b30; } .text-waiting { color: #ff3b30; font-size: 13px; font-weight: 700; }
 .status-completed { background-color: #34c759; } .text-completed { color: #34c759; font-size: 13px; font-weight: 700; }
-.card-product { font-size: 22px; font-weight: 800; color: #1d1d1f; display: flex; align-items: center; flex-wrap: wrap; letter-spacing: -0.5px; margin-bottom: 8px; }
-.product-tag { margin-left:8px; font-size:13px; color:#86868b; background-color:#f5f5f7; padding:4px 10px; border-radius:12px; font-weight:600;}
+.card-product { font-size: 21px; font-weight: 800; color: #1d1d1f; display: flex; align-items: center; flex-wrap: wrap; letter-spacing: -0.5px; margin-bottom: 8px; line-height: 1.3;}
+.product-tag { margin-left:8px; font-size:13px; color:#86868b; background-color:#f5f5f7; padding:4px 10px; border-radius:12px; font-weight:600; margin-top:4px;}
 .card-memo { background-color: #fff8e6; color: #d08a00; padding: 10px 12px; border-radius: 10px; font-size: 14px; margin-bottom: 10px; font-weight: 600; }
 .next-color-tag { display: inline-block; font-size: 13px; color: #ff9500; font-weight: 700; background-color: #fff2e6; padding: 4px 10px; border-radius: 8px; margin-bottom: 10px; }
 .card-metrics { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
@@ -115,7 +115,8 @@ if 'is_admin' not in st.session_state: st.session_state.is_admin = False
 if 'master_data' not in st.session_state:
     loaded_master = load_master_data()
     if not loaded_master:
-        loaded_master = {"---": {"p_code": "-", "color_text": "-", "weight": 0.0, "cycle_time": 0}}
+        # 데이터 구조에 p_part_code(부품코드) 추가
+        loaded_master = {"---": {"p_code": "-", "p_part_code": "-", "color_text": "-", "weight": 0.0, "cycle_time": 0}}
         save_master_data(loaded_master)
     st.session_state.master_data = loaded_master
 
@@ -148,12 +149,13 @@ if 'm_states' not in st.session_state:
                 except: v[col] = []
             elif not isinstance(raw_data, list): v[col] = []
         if current_p not in st.session_state.master_data:
-            st.session_state.master_data[current_p] = {"p_code": "", "color_text": "", "weight": 0.0, "cycle_time": 10}
+            # 기존 데이터 호환을 위해 없으면 빈 값으로 추가
+            st.session_state.master_data[current_p] = {"p_code": "", "p_part_code": "", "color_text": "", "weight": 0.0, "cycle_time": 10}
             save_master_data(st.session_state.master_data)
     st.session_state.m_states = loaded_data
 
 if not st.session_state.m_states:
-    default_machines = ["E-IN 851AD", "E-IN 854AD"]
+    default_machines = ["851", "854"]
     for m_name in default_machines:
         st.session_state.m_states[m_name] = {'count': 0, 'last_time': time.time(), 'is_running': False, 'p_name': "---", 'target': 1000, 'schedule': [], 'history': [], 'floor': get_floor_from_machine(m_name), 'memo': ""}
 
@@ -169,6 +171,7 @@ def render_unified_machine_card(m_name):
     
     master_info = st.session_state.master_data.get(safe_p_name, {})
     p_code = master_info.get("p_code", "")
+    p_part_code = master_info.get("p_part_code", "") # 부품코드 불러오기
     color_text = master_info.get("color_text", "")
     weight = master_info.get("weight", 0.0)
     cycle = master_info.get("cycle_time", 10)
@@ -214,7 +217,10 @@ def render_unified_machine_card(m_name):
 
     raw_memo = m.get('memo', ''); memo_text = str(raw_memo).strip() if pd.notna(raw_memo) and str(raw_memo).lower() != 'nan' else ''
     memo_html = f"<div class='card-memo'>📌 {memo_text}</div>" if memo_text else ""
-    p_code_html = f"<span style='color:#86868b; font-size:15px; margin-right:6px; font-weight:700;'>[{p_code}]</span>" if p_code else ""
+    
+    # 완제품코드와 부품코드 UI 표시
+    p_code_html = f"<span style='color:#007aff; font-size:14px; margin-right:4px; font-weight:700;'>[완: {p_code}]</span>" if p_code else ""
+    p_part_code_html = f"<span style='color:#ff9500; font-size:14px; margin-right:6px; font-weight:700;'>[부: {p_part_code}]</span>" if p_part_code else ""
     color_html = f"<span class='product-tag'>🎨 {color_text}</span>" if color_text else ""
     weight_html = f"<span class='product-tag'>⚖️ {weight}g</span>" if weight > 0 else ""
 
@@ -223,7 +229,7 @@ def render_unified_machine_card(m_name):
     with st.container(border=True):
         st.markdown(f"""
         <div class="machine-title"><span>🤖 {m_name}</span><div class='status-container'><span class='status-dot {status_class}'></span><span class='status-text {text_class}'>{status_text}</span></div></div>
-        <div class="card-product">{p_code_html} {safe_p_name} {color_html} {weight_html}</div>
+        <div class="card-product"><div>{p_code_html}{p_part_code_html} {safe_p_name}</div> {color_html} {weight_html}</div>
         {next_color_html}{memo_html}
         <div class="card-metrics">
         <div class="modern-metric"><div class="metric-label">생산량(EA)</div><div class="metric-value">{count_val} / {target_val}</div></div>
@@ -279,7 +285,7 @@ def render_unified_machine_card(m_name):
             p_name = str(m.get('p_name', '---'))
             if p_name.lower() == 'nan': p_name = '---'
             if p_name not in st.session_state.master_data:
-                st.session_state.master_data[p_name] = {"p_code": "", "color_text": "", "weight": 0.0, "cycle_time": 10}
+                st.session_state.master_data[p_name] = {"p_code": "", "p_part_code": "", "color_text": "", "weight": 0.0, "cycle_time": 10}
                 save_master_data(st.session_state.master_data)
             
             p_index = list(st.session_state.master_data.keys()).index(p_name)
@@ -410,21 +416,17 @@ with t3:
         for m_name in f3_machines[mid3:]:
             render_unified_machine_card(m_name)
 
-# --- 💡 공정계획표 탭 (완료항목 숨기기 기능 추가) ---
+# --- 공정계획표 탭 ---
 with t_plan:
     st.subheader("📅 스마트 공정 계획표 (엑셀 뷰)")
-    
-    # 추가된 황금 기능: 체크박스를 통해 완료된 공정을 표에서 당겨올 수 있습니다!
     hide_history = st.checkbox("☑️ 완료된 공정 기록 숨기기 (진행/예정 항목만 앞으로 당겨서 보기)", value=True)
-    
-    st.info("✨ 표 오른쪽의 **빈칸을 더블클릭**하고 **제품코드**를 입력 후 엔터를 치면 일정이 쏙 들어갑니다! (수량 지정: `코드/수량`)")
+    st.info("✨ 표 오른쪽의 빈칸을 더블클릭하고 **완제품코드 또는 부품코드**를 입력 후 엔터를 치면 일정이 쏙 들어갑니다! (수량 지정: `코드/수량`)")
     
     def build_table_data(machines_list, hide_hist):
         max_cols = 0; raw_table_data = []
         for m_name in machines_list:
             m = st.session_state.m_states[m_name]; tasks = []
             
-            # 💡 체크박스가 해제되어 있을 때만(hide_hist가 False) 완료된 내역을 보여줍니다.
             if not hide_hist:
                 for h in m.get('history', []): tasks.append(f"✅[완료] {h['p_name']} ({h['count']}EA)")
                 
@@ -468,11 +470,16 @@ with t_plan:
                         parts = typed_str.split("/"); typed_str = parts[0].strip()
                         try: target_qty = int(parts[1].strip())
                         except: pass
+                    
                     matched_p_name = None
                     for p, info in st.session_state.master_data.items():
-                        if info.get('p_code') == typed_str: matched_p_name = p; break
+                        # 완제품코드나 부품코드 둘 중 하나라도 일치하면 해당 제품으로 인식!
+                        if info.get('p_code') == typed_str or info.get('p_part_code') == typed_str: 
+                            matched_p_name = p; break
+                            
                     if not matched_p_name and typed_str in st.session_state.master_data: matched_p_name = typed_str
                     final_p_name = matched_p_name if matched_p_name else typed_str
+                    
                     if m.get('p_name', '---') == '---': m.update({'p_name': final_p_name, 'target': target_qty, 'count': 0, 'is_running': False, 'last_time': time.time()}); clear_widget_state(m_name)
                     else:
                         if 'schedule' not in m: m['schedule'] = []
@@ -481,6 +488,7 @@ with t_plan:
 
     if changes_made: save_machine_data(st.session_state.m_states); st.success("✅ 일정이 자동 추가되었습니다!"); time.sleep(1); st.rerun()
 
+# --- 기준 정보 관리(설정) 탭 ---
 with t_admin:
     st.subheader("⚙️ 시스템 기준 정보 관리")
     if not st.session_state.is_admin:
@@ -492,32 +500,46 @@ with t_admin:
                 if pwd == ADMIN_PASSWORD: st.session_state.is_admin = True; st.success("✅ 로그인 성공!"); time.sleep(0.5); st.rerun()
                 else: st.error("❌ 비밀번호가 틀렸습니다.")
         st.write("---"); st.markdown("#### 📋 현재 등록된 제품 목록")
-        master_list = [{"제품코드": info.get("p_code", ""), "제품명": p_name, "컬러": info.get("color_text", ""), "무게(g)": info.get("weight", 0.0), "사이클속도(초)": info.get("cycle_time", 10)} for p_name, info in st.session_state.master_data.items()]
+        master_list = [{"완제품코드": info.get("p_code", ""), "부품코드": info.get("p_part_code", ""), "제품명": p_name, "컬러": info.get("color_text", ""), "무게(g)": info.get("weight", 0.0), "사이클속도(초)": info.get("cycle_time", 10)} for p_name, info in st.session_state.master_data.items()]
         st.dataframe(pd.DataFrame(master_list), use_container_width=True)
     else:
         if st.button("🔓 로그아웃"): st.session_state.is_admin = False; st.rerun()
         st.write("---")
+        
+        st.markdown("#### 📦 제품 (Master Data) 관리")
+        with st.expander("➕ 제품 등록 및 수정", expanded=True):
+            # 입력 항목이 많아져서 2줄로 깔끔하게 정리했습니다.
+            col_m1, col_m2, col_m3 = st.columns(3)
+            with col_m1: a_p_code = st.text_input("완제품코드")
+            with col_m2: a_p_part_code = st.text_input("부품코드")
+            with col_m3: a_p_name = st.text_input("제품명 (필수)")
+            
+            col_m4, col_m5, col_m6 = st.columns(3)
+            with col_m4: a_p_color = st.text_input("컬러 텍스트 (예: 투명)")
+            with col_m5: a_p_weight = st.number_input("무게 (g)", min_value=0.0, value=0.0, step=0.1)
+            with col_m6: a_p_cycle = st.number_input("사이클 (초)", min_value=0, value=10)
+            
+            if st.button("제품 적용하기"):
+                if a_p_name.strip(): 
+                    st.session_state.master_data[a_p_name] = {"p_code": a_p_code, "p_part_code": a_p_part_code, "color_text": a_p_color, "weight": a_p_weight, "cycle_time": a_p_cycle}
+                    save_master_data(st.session_state.master_data)
+                    st.success("저장 완료!")
+                    time.sleep(1)
+                    st.rerun()
+                else: st.warning("제품명은 필수입니다.")
+                
+        st.write("---")
+        master_list = [{"완제품코드": info.get("p_code", ""), "부품코드": info.get("p_part_code", ""), "제품명": p_name, "컬러": info.get("color_text", ""), "무게(g)": info.get("weight", 0.0), "사이클(초)": info.get("cycle_time", 10)} for p_name, info in st.session_state.master_data.items()]
+        st.dataframe(pd.DataFrame(master_list), use_container_width=True)
+        
+        st.write("---")
         col_admin1, col_admin2 = st.columns(2)
         with col_admin1:
-            st.markdown("#### 📦 제품 (Master Data) 관리")
-            with st.expander("➕ 제품 등록 및 수정", expanded=True):
-                col_m1, col_m2 = st.columns(2); col_m3, col_m4, col_m5 = st.columns(3)
-                with col_m1: a_p_code = st.text_input("제품코드")
-                with col_m2: a_p_name = st.text_input("제품명 (필수)")
-                with col_m3: a_p_color = st.text_input("컬러 텍스트 (예: 투명)")
-                with col_m4: a_p_weight = st.number_input("무게 (g)", min_value=0.0, value=0.0, step=0.1)
-                with col_m5: a_p_cycle = st.number_input("사이클 (초)", min_value=0, value=10)
-                if st.button("제품 적용하기"):
-                    if a_p_name.strip(): st.session_state.master_data[a_p_name] = {"p_code": a_p_code, "color_text": a_p_color, "weight": a_p_weight, "cycle_time": a_p_cycle}; save_master_data(st.session_state.master_data); st.success("저장 완료!"); time.sleep(1); st.rerun()
-                    else: st.warning("제품명은 필수입니다.")
-            st.write("---"); master_list = [{"제품코드": info.get("p_code", ""), "제품명": p_name, "컬러": info.get("color_text", ""), "무게(g)": info.get("weight", 0.0), "사이클(초)": info.get("cycle_time", 10)} for p_name, info in st.session_state.master_data.items()]
-            st.dataframe(pd.DataFrame(master_list), use_container_width=True); st.write("---")
             del_p_name = st.selectbox("삭제할 제품 선택", list(st.session_state.master_data.keys()))
             if st.button("선택 제품 영구 삭제"):
                 if del_p_name != "---": del st.session_state.master_data[del_p_name]; save_master_data(st.session_state.master_data); st.success("삭제 완료!"); time.sleep(1); st.rerun()
         with col_admin2:
-            st.markdown("#### 🤖 기계 (Machine) 관리")
-            with st.expander("➕ 새 기계 라인 추가", expanded=True):
+            with st.expander("➕ 새 기계 라인 추가", expanded=False):
                 new_m_name = st.text_input("추가할 기계 이름 (예: E-IN 851AD)")
                 new_m_floor = st.radio("설치 층수", ["F1", "F3"], horizontal=True)
                 if st.button("기계 추가하기"):
@@ -531,7 +553,7 @@ with t_admin:
                         st.success("생성 완료!")
                         time.sleep(1)
                         st.rerun()
-            st.write("---"); del_m_name = st.selectbox("철거/삭제할 기계 선택", list(st.session_state.m_states.keys()))
+            del_m_name = st.selectbox("철거/삭제할 기계 선택", list(st.session_state.m_states.keys()))
             if st.button("선택 기계 영구 삭제"): del st.session_state.m_states[del_m_name]; save_machine_data(st.session_state.m_states); st.success("철거 완료!"); time.sleep(1); st.rerun()
 
 with st.sidebar:
