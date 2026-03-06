@@ -122,7 +122,7 @@ def clear_widget_state(m_name=None):
         for k in [f"det_p_{m_name}", f"det_t_{m_name}", f"det_c_{m_name}", f"det_memo_{m_name}"]:
             if k in st.session_state: del st.session_state[k]
 
-# --- 1. CSS 디자인 (모바일 강제 2열 최적화 추가) ---
+# --- 1. 정밀 타겟팅 CSS 디자인 ---
 st.markdown("""
 <style>
 .stApp, .stApp > div, [data-testid="stAppViewContainer"], [data-testid="stMain"], [data-testid="stAppViewBlockContainer"], [data-testid="stMainBlockContainer"] {
@@ -152,30 +152,29 @@ display: none !important; opacity: 0 !important; visibility: hidden !important;
 .schedule-item { background: #fbfbfd; border: 1px solid #e5e5ea; padding: 10px; margin-bottom: 6px; border-radius: 10px; font-size: 13px; font-weight: 500;}
 .history-item { background: #fbfbfd; border: 1px solid #e5e5ea; padding: 10px; margin-bottom: 6px; border-radius: 10px; font-size: 13px; color: #86868b; }
 
-/* 📱 핵심 모바일(스마트폰) 강제 2열 배치 CSS */
+/* 📱 모바일 강제 2열 최적화 (버튼 박스 깨짐 완벽 방지) */
 @media (max-width: 768px) {
-    /* 좌우 컬럼을 감싸는 박스가 세로로 꺾이지 않도록 강제 유지 */
-    div[data-testid="stHorizontalBlock"] {
+    /* .grid-marker가 포함된 최외곽 컬럼만 강제 2열 적용! (내부 버튼이나 설정창은 보호) */
+    div[data-testid="stHorizontalBlock"]:has(.grid-marker) {
         flex-direction: row !important;
         flex-wrap: nowrap !important;
         gap: 0.3rem !important;
     }
-    /* 컬럼 각각이 화면의 절반(50%)을 차지하도록 설정 */
-    div[data-testid="column"] {
+    div[data-testid="stHorizontalBlock"]:has(.grid-marker) > div[data-testid="column"] {
         width: 50% !important;
-        flex: 1 1 50% !important;
         min-width: 50% !important;
     }
-    /* 폰화면에 맞게 글씨와 패딩 축소 */
+    
+    /* 모바일에서 글씨 크기 자연스럽게 축소 */
     .machine-title { font-size: 15px !important; margin-bottom: 5px !important; }
-    .status-text { font-size: 11px !important; }
-    .status-container { padding: 2px 8px !important; }
-    .card-product { font-size: 14px !important; }
-    .modern-metric { padding: 8px !important; min-width: 50px !important; }
+    .status-container { padding: 2px 6px !important; }
+    .status-text { font-size: 10px !important; }
+    .card-product { font-size: 13px !important; }
+    .modern-metric { padding: 6px !important; min-width: 45px !important; }
     .metric-value { font-size: 14px !important; }
     .metric-label { font-size: 9px !important; margin-bottom: 2px !important; }
-    .stButton>button { padding: 2px 4px !important; font-size: 12px !important; min-height: 32px !important; }
-    span[style*="font-size:14px"] { font-size: 11px !important; } /* 제품/부품 코드 작게 */
+    span[style*="font-size:14px"] { font-size: 10px !important; } /* 제품/부품 코드 폰트 조절 */
+    .stButton>button { padding: 2px 4px !important; font-size: 12px !important; min-height: 35px !important; }
 }
 </style>
 """, unsafe_allow_html=True)
@@ -306,34 +305,40 @@ def render_unified_machine_card(m_name):
         </div>
         """, unsafe_allow_html=True)
 
-        c1, c2, c3 = st.columns(3)
+        # 💡 핵심 수정 파트: 버튼이 좁아터지지 않게 2개/1개 구조로 변경했습니다!
+        c_btn1, c_btn2 = st.columns(2)
         if target_val > 0 and count_val >= target_val:
-            if c1.button(_("⏭️ NEXT"), key=f"next_{m_name}", use_container_width=True):
-                if m['p_name'] != "---":
-                    if 'history' not in m: m['history'] = []
-                    m['history'].append({'p_name': m['p_name'], 'target': m['target'], 'count': m['count'], 'date': time.strftime("%H:%M")})
-                if m.get('schedule'):
-                    first_job = m['schedule'].pop(0)
-                    m.update({'p_name': first_job['p_name'], 'target': first_job['target'], 'count': 0, 'is_running': False, 'last_time': time.time()})
-                else: m.update({'p_name': "---", 'target': 1000, 'count': 0, 'is_running': False})
-                clear_widget_state(m_name); save_machine_data(st.session_state.m_states); st.rerun()
-            if c2.button(_("🔄 리셋"), key=f"reset_{m_name}", use_container_width=True):
-                m['count'] = 0; m['is_running'] = False; m['last_time'] = time.time()
-                clear_widget_state(m_name); save_machine_data(st.session_state.m_states); st.rerun()
-        else:
-            if c1.button(_("▶️ START"), key=f"run_{m_name}", use_container_width=True):
-                if m.get('p_name', '---') == '---':
+            with c_btn1:
+                if st.button(_("⏭️ NEXT"), key=f"next_{m_name}", use_container_width=True):
+                    if m['p_name'] != "---":
+                        if 'history' not in m: m['history'] = []
+                        m['history'].append({'p_name': m['p_name'], 'target': m['target'], 'count': m['count'], 'date': time.strftime("%H:%M")})
                     if m.get('schedule'):
                         first_job = m['schedule'].pop(0)
-                        m.update({'p_name': first_job['p_name'], 'target': first_job['target'], 'count': 0, 'is_running': True, 'last_time': time.time()})
-                        clear_widget_state(m_name)
-                else: m['is_running'] = True; m['last_time'] = time.time()
-                save_machine_data(st.session_state.m_states); st.rerun()
-            if c2.button(_("⏸️ STOP"), key=f"stop_{m_name}", use_container_width=True):
-                m['is_running'] = False; save_machine_data(st.session_state.m_states); st.rerun()
+                        m.update({'p_name': first_job['p_name'], 'target': first_job['target'], 'count': 0, 'is_running': False, 'last_time': time.time()})
+                    else: m.update({'p_name': "---", 'target': 1000, 'count': 0, 'is_running': False})
+                    clear_widget_state(m_name); save_machine_data(st.session_state.m_states); st.rerun()
+            with c_btn2:
+                if st.button(_("🔄 리셋"), key=f"reset_{m_name}", use_container_width=True):
+                    m['count'] = 0; m['is_running'] = False; m['last_time'] = time.time()
+                    clear_widget_state(m_name); save_machine_data(st.session_state.m_states); st.rerun()
+        else:
+            with c_btn1:
+                if st.button(_("▶️ START"), key=f"run_{m_name}", use_container_width=True):
+                    if m.get('p_name', '---') == '---':
+                        if m.get('schedule'):
+                            first_job = m['schedule'].pop(0)
+                            m.update({'p_name': first_job['p_name'], 'target': first_job['target'], 'count': 0, 'is_running': True, 'last_time': time.time()})
+                            clear_widget_state(m_name)
+                    else: m['is_running'] = True; m['last_time'] = time.time()
+                    save_machine_data(st.session_state.m_states); st.rerun()
+            with c_btn2:
+                if st.button(_("⏸️ STOP"), key=f"stop_{m_name}", use_container_width=True):
+                    m['is_running'] = False; save_machine_data(st.session_state.m_states); st.rerun()
         
+        # 더보기 버튼은 길고 시원하게 맨 밑에 1줄 전체를 쓰도록 배치!
         btn_text = _("🔼 닫기") if is_open else _("🔽 더보기")
-        if c3.button(btn_text, key=f"det_toggle_{m_name}", use_container_width=True):
+        if st.button(btn_text, key=f"det_toggle_{m_name}", use_container_width=True):
             if is_open: st.session_state.selected_machine = None
             else: st.session_state.selected_machine = m_name
             st.rerun()
@@ -361,26 +366,24 @@ def render_unified_machine_card(m_name):
             with col_t: new_target = st.number_input(_("목표 수량"), min_value=1, value=int(m.get('target', 1000)), key=f"det_t_{m_name}")
             with col_c: new_count = st.number_input(_("현재 생산량"), min_value=0, value=int(m.get('count', 0)), key=f"det_c_{m_name}")
             
-            c_btn1, c_btn2, c_btn3 = st.columns(3)
-            with c_btn1:
-                if st.button(_("설정 적용"), key=f"det_upd_p_{m_name}", use_container_width=True):
-                    m['p_name'] = selected_p_name; m['target'] = new_target; m['count'] = new_count if new_count <= new_target else new_target; m['last_time'] = time.time()
-                    clear_widget_state(m_name); save_machine_data(st.session_state.m_states); st.rerun()
-            with c_btn2:
-                if st.button(_("수량 리셋"), key=f"det_rst_{m_name}", use_container_width=True):
-                    m['count'] = 0; m['last_time'] = time.time()
-                    clear_widget_state(m_name); save_machine_data(st.session_state.m_states); st.rerun()
-            with c_btn3:
-                if st.button(_("⏭️ 당겨오기"), key=f"det_next_job_{m_name}", use_container_width=True):
-                    if m['p_name'] != "---":
-                        if 'history' not in m: m['history'] = []
-                        m['history'].append({'p_name': m['p_name'], 'target': m['target'], 'count': m['count'], 'date': time.strftime("%H:%M")})
-                    if m.get('schedule'):
-                        first_job = m['schedule'].pop(0)
-                        m.update({'p_name': first_job['p_name'], 'target': first_job['target'], 'count': 0, 'is_running': False, 'last_time': time.time()})
-                    else:
-                        m.update({'p_name': "---", 'target': 1000, 'count': 0, 'is_running': False})
-                    clear_widget_state(m_name); save_machine_data(st.session_state.m_states); st.rerun()
+            # 상세 설정 안쪽의 버튼들도 세로로 넓게 쓰도록 분리 (폰 환경 완벽 대응)
+            st.markdown("<br>", unsafe_allow_html=True)
+            if st.button(_("설정 적용"), key=f"det_upd_p_{m_name}", use_container_width=True):
+                m['p_name'] = selected_p_name; m['target'] = new_target; m['count'] = new_count if new_count <= new_target else new_target; m['last_time'] = time.time()
+                clear_widget_state(m_name); save_machine_data(st.session_state.m_states); st.rerun()
+            if st.button(_("수량 리셋"), key=f"det_rst_{m_name}", use_container_width=True):
+                m['count'] = 0; m['last_time'] = time.time()
+                clear_widget_state(m_name); save_machine_data(st.session_state.m_states); st.rerun()
+            if st.button(_("⏭️ 당겨오기"), key=f"det_next_job_{m_name}", use_container_width=True):
+                if m['p_name'] != "---":
+                    if 'history' not in m: m['history'] = []
+                    m['history'].append({'p_name': m['p_name'], 'target': m['target'], 'count': m['count'], 'date': time.strftime("%H:%M")})
+                if m.get('schedule'):
+                    first_job = m['schedule'].pop(0)
+                    m.update({'p_name': first_job['p_name'], 'target': first_job['target'], 'count': 0, 'is_running': False, 'last_time': time.time()})
+                else:
+                    m.update({'p_name': "---", 'target': 1000, 'count': 0, 'is_running': False})
+                clear_widget_state(m_name); save_machine_data(st.session_state.m_states); st.rerun()
 
             st.write("---")
             st.markdown(f"**{_('📋 대기열')}**")
@@ -416,6 +419,7 @@ def render_unified_machine_card(m_name):
                                 st.success(_("대기열 추가 완료"))
                             save_machine_data(st.session_state.m_states); time.sleep(1); st.rerun()
                 if st.button(_("🗑️ 모두 지우기"), key=f"clear_hist_{m_name}", use_container_width=True): m['history'] = []; save_machine_data(st.session_state.m_states); st.rerun()
+
 
 # --- 사이드바 번역 설정 ---
 with st.sidebar:
@@ -469,8 +473,11 @@ with t1:
         
         c1, c2 = st.columns(2)
         with c1:
+            # 💡 정밀 타겟팅 CSS를 위한 숨김 마커 추가! (버튼 깨짐 방지용)
+            st.markdown("<span class='grid-marker'></span>", unsafe_allow_html=True)
             if real_left_m: render_unified_machine_card(real_left_m)
         with c2:
+            st.markdown("<span class='grid-marker'></span>", unsafe_allow_html=True)
             if real_right_m: render_unified_machine_card(real_right_m)
                 
     leftovers = [m for m in f1_machines if m not in layout_all_set]
@@ -480,14 +487,17 @@ with t1:
         leftover_cols = st.columns(2)
         for idx, m_name in enumerate(leftovers):
             with leftover_cols[idx % 2]:
+                st.markdown("<span class='grid-marker'></span>", unsafe_allow_html=True)
                 render_unified_machine_card(m_name)
 
 with t3:
     cols3 = st.columns(2)
     mid3 = len(f3_machines) // 2 + (len(f3_machines) % 2 > 0)
     with cols3[0]:
+        st.markdown("<span class='grid-marker'></span>", unsafe_allow_html=True)
         for m_name in f3_machines[:mid3]: render_unified_machine_card(m_name)
     with cols3[1]:
+        st.markdown("<span class='grid-marker'></span>", unsafe_allow_html=True)
         for m_name in f3_machines[mid3:]: render_unified_machine_card(m_name)
 
 with t_plan:
