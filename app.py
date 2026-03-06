@@ -78,7 +78,7 @@ def clear_widget_state(m_name=None):
         for k in [f"det_p_{m_name}", f"det_t_{m_name}", f"det_c_{m_name}", f"det_memo_{m_name}"]:
             if k in st.session_state: del st.session_state[k]
 
-# --- 1. CSS 디자인 (애플 스타일 화이트 테마) ---
+# --- 1. CSS 디자인 (아코디언 카드 스타일) ---
 st.markdown("""
 <style>
 .stApp, .stApp > div, [data-testid="stAppViewContainer"], [data-testid="stMain"], [data-testid="stAppViewBlockContainer"], [data-testid="stMainBlockContainer"] {
@@ -89,31 +89,29 @@ display: none !important; opacity: 0 !important; visibility: hidden !important;
 }
 .stApp { background-color: #fbfbfd; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #1d1d1f; }
 .modern-header { font-size: 28px; font-weight: 700; color: #1d1d1f; margin-bottom: 10px; padding-top: 20px; letter-spacing: -0.5px; }
-.modern-card { background-color: #ffffff; border-radius: 18px; padding: 24px; margin-bottom: 10px; border: none; box-shadow: 0 4px 14px rgba(0,0,0,0.04), 0 1px 4px rgba(0,0,0,0.02); display: flex; flex-direction: column; gap: 12px; transition: box-shadow 0.3s ease; }
-.modern-card:hover { box-shadow: 0 10px 24px rgba(0,0,0,0.08); }
-.card-title { font-size: 20px; font-weight: 800; color: #1d1d1f; display: flex; justify-content: space-between; align-items: center; }
+
+/* 기계 정보 텍스트 디자인 */
+.machine-title { font-size: 20px; font-weight: 800; color: #1d1d1f; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
 .status-container { display: flex; align-items: center; gap: 6px; background: #f5f5f7; padding: 4px 12px; border-radius: 20px; }
 .status-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
 .status-running { background-color: #007aff; } .text-running { color: #007aff; font-size: 13px; font-weight: 700; }
 .status-waiting { background-color: #ff3b30; } .text-waiting { color: #ff3b30; font-size: 13px; font-weight: 700; }
 .status-completed { background-color: #34c759; } .text-completed { color: #34c759; font-size: 13px; font-weight: 700; }
-.card-product { font-size: 22px; font-weight: 800; color: #1d1d1f; display: flex; align-items: center; flex-wrap: wrap; letter-spacing: -0.5px; margin-top: 4px; }
+.card-product { font-size: 22px; font-weight: 800; color: #1d1d1f; display: flex; align-items: center; flex-wrap: wrap; letter-spacing: -0.5px; margin-bottom: 8px; }
 .product-tag { margin-left:8px; font-size:13px; color:#86868b; background-color:#f5f5f7; padding:4px 10px; border-radius:12px; font-weight:600;}
-.card-memo { background-color: #fff8e6; color: #d08a00; padding: 12px; border-radius: 10px; font-size: 14px; margin-top: 5px; font-weight: 600; }
-.next-color-tag { display: inline-block; margin-top: 4px; font-size: 14px; color: #ff9500; font-weight: 700; background-color: #fff2e6; padding: 4px 10px; border-radius: 8px; }
-.card-metrics { display: flex; gap: 10px; margin-top: 8px; }
-.modern-metric { flex: 1; background-color: #f5f5f7; padding: 12px; border-radius: 14px; text-align: left; border: none; }
-.modern-metric .metric-label { font-size: 12px; color: #86868b; margin-bottom: 4px; font-weight: 600;}
-.modern-metric .metric-value { font-size: 18px; font-weight: 800; color: #1d1d1f; letter-spacing: -0.5px;}
+.card-memo { background-color: #fff8e6; color: #d08a00; padding: 10px 12px; border-radius: 10px; font-size: 14px; margin-bottom: 10px; font-weight: 600; }
+.next-color-tag { display: inline-block; font-size: 13px; color: #ff9500; font-weight: 700; background-color: #fff2e6; padding: 4px 10px; border-radius: 8px; margin-bottom: 10px; }
+.card-metrics { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+.modern-metric { flex: 1; min-width: 80px; background-color: #f5f5f7; padding: 12px; border-radius: 14px; text-align: left; }
+.metric-label { font-size: 11px; color: #86868b; margin-bottom: 4px; font-weight: 600;}
+.metric-value { font-size: 17px; font-weight: 800; color: #1d1d1f; letter-spacing: -0.5px;}
 .time-value { color: #ff3b30 !important; }
-.schedule-item { background: #ffffff; border: 1px solid #e5e5ea; padding: 12px; margin-bottom: 8px; border-radius: 12px; font-size: 14px; font-weight: 500; box-shadow: 0 1px 2px rgba(0,0,0,0.02); }
-.history-item { background: #fbfbfd; border: 1px solid #e5e5ea; padding: 12px; margin-bottom: 8px; border-radius: 12px; font-size: 14px; color: #86868b; }
-.schedule-date { color: #86868b; font-size: 12px; margin-right: 8px; }
+.schedule-item { background: #fbfbfd; border: 1px solid #e5e5ea; padding: 10px; margin-bottom: 6px; border-radius: 10px; font-size: 13px; font-weight: 500;}
+.history-item { background: #fbfbfd; border: 1px solid #e5e5ea; padding: 10px; margin-bottom: 6px; border-radius: 10px; font-size: 13px; color: #86868b; }
 </style>
 """, unsafe_allow_html=True)
 
-if 'is_admin' not in st.session_state:
-    st.session_state.is_admin = False
+if 'is_admin' not in st.session_state: st.session_state.is_admin = False
 
 if 'master_data' not in st.session_state:
     loaded_master = load_master_data()
@@ -141,18 +139,15 @@ if 'm_states' not in st.session_state:
     for k, v in loaded_data.items():
         if 'floor' not in v: v['floor'] = get_floor_from_machine(k)
         raw_memo = v.get('memo', '')
-        if pd.isna(raw_memo) or str(raw_memo).lower() == 'nan': v['memo'] = ""
-        else: v['memo'] = str(raw_memo)
+        v['memo'] = "" if pd.isna(raw_memo) or str(raw_memo).lower() == 'nan' else str(raw_memo)
         current_p = str(v.get('p_name', '---'))
-        if current_p.lower() == 'nan': current_p = '---'
-        v['p_name'] = current_p
+        v['p_name'] = '---' if current_p.lower() == 'nan' else current_p
         for col in ['schedule', 'history']:
             raw_data = v.get(col, [])
             if isinstance(raw_data, str):
                 try: v[col] = ast.literal_eval(raw_data)
                 except: v[col] = []
-            elif not isinstance(raw_data, list):
-                v[col] = []
+            elif not isinstance(raw_data, list): v[col] = []
         if current_p not in st.session_state.master_data:
             st.session_state.master_data[current_p] = {"p_code": "", "color_text": "", "weight": 0.0, "cycle_time": 10}
             save_master_data(st.session_state.master_data)
@@ -166,88 +161,8 @@ if not st.session_state.m_states:
 if 'selected_machine' not in st.session_state:
     st.session_state.selected_machine = None
 
-def render_details_panel(m_name, m):
-    # 모바일과 PC 모두 보기 편하도록 디자인 변경 (테두리 안에서 렌더링)
-    st.markdown(f"##### 🔽 {m_name} 상세 및 설정")
-    
-    st.markdown("**📝 특이사항 메모**")
-    raw_memo = m.get('memo', '')
-    safe_memo = str(raw_memo) if pd.notna(raw_memo) and str(raw_memo).lower() != 'nan' else ''
-    new_memo = st.text_area("메모 입력 (작업 완료 시 자동 삭제)", value=safe_memo, height=68, key=f"det_memo_{m_name}", label_visibility="collapsed")
-    if st.button("메모 저장", key=f"det_save_memo_{m_name}"):
-        m['memo'] = new_memo; save_machine_data(st.session_state.m_states); st.success("메모 반영 완료"); st.rerun()
-        
-    st.write("---")
-    st.markdown("**⚙️ 현재 제품 및 수량 설정**")
-    p_name = str(m.get('p_name', '---'))
-    if p_name.lower() == 'nan': p_name = '---'
-    if p_name not in st.session_state.master_data:
-        st.session_state.master_data[p_name] = {"p_code": "", "color_text": "", "weight": 0.0, "cycle_time": 10}
-        save_master_data(st.session_state.master_data)
-    
-    p_index = list(st.session_state.master_data.keys()).index(p_name)
-    selected_p_name = st.selectbox("현재 제품", list(st.session_state.master_data.keys()), index=p_index, key=f"det_p_{m_name}")
-    col_t, col_c = st.columns(2)
-    with col_t: new_target = st.number_input("목표 수량", min_value=1, value=int(m.get('target', 1000)), key=f"det_t_{m_name}")
-    with col_c: new_count = st.number_input("현재 생산량", min_value=0, value=int(m.get('count', 0)), key=f"det_c_{m_name}")
-    
-    c_btn1, c_btn2, c_btn3 = st.columns(3)
-    with c_btn1:
-        if st.button("설정 적용", key=f"det_upd_p_{m_name}", use_container_width=True):
-            m['p_name'] = selected_p_name; m['target'] = new_target; m['count'] = new_count if new_count <= new_target else new_target; m['last_time'] = time.time()
-            clear_widget_state(m_name); save_machine_data(st.session_state.m_states); st.rerun()
-    with c_btn2:
-        if st.button("수량 리셋", key=f"det_rst_{m_name}", use_container_width=True):
-            m['count'] = 0; m['last_time'] = time.time()
-            clear_widget_state(m_name); save_machine_data(st.session_state.m_states); st.rerun()
-    with c_btn3:
-        if st.button("⏭️ 당겨오기", key=f"det_next_job_{m_name}", use_container_width=True):
-            if m['p_name'] != "---":
-                if 'history' not in m: m['history'] = []
-                m['history'].append({'p_name': m['p_name'], 'target': m['target'], 'count': m['count'], 'date': time.strftime("%H:%M")})
-            if m.get('schedule'):
-                first_job = m['schedule'].pop(0)
-                m.update({'p_name': first_job['p_name'], 'target': first_job['target'], 'count': 0, 'is_running': False, 'last_time': time.time()})
-            else:
-                m.update({'p_name': "---", 'target': 1000, 'count': 0, 'is_running': False})
-            clear_widget_state(m_name); save_machine_data(st.session_state.m_states); st.rerun()
-
-    st.write("---")
-    st.markdown("**📋 대기열**")
-    schedule = m.get('schedule', [])
-    if not schedule: st.info("등록된 대기 일정이 없습니다.")
-    else:
-        for idx, item in enumerate(schedule):
-            date_str = f"[{item['date']}] " if 'date' in item and item['date'] else ""
-            sch_col, del_col = st.columns([5, 1])
-            with sch_col: st.markdown(f"<div class='schedule-item'><div><b>{idx+1}.</b> <span class='schedule-date'>{date_str}</span>{item['p_name']}</div><div>🎯 <b>{item['target']}</b> EA</div></div>", unsafe_allow_html=True)
-            with del_col:
-                if st.button("❌", key=f"del_sch_{m_name}_{idx}"):
-                    m['schedule'].pop(idx); save_machine_data(st.session_state.m_states); st.rerun()
-
-    st.write("---")
-    st.markdown("**✅ 생산 완료 내역**")
-    history = m.get('history', [])
-    if not history: st.info("아직 내역이 없습니다.")
-    else:
-        for idx, item in enumerate(reversed(history)):
-            real_idx = len(history) - 1 - idx
-            hist_date = f"[{item.get('date', '')}]"
-            hist_col, readd_col = st.columns([5, 1])
-            with hist_col: st.markdown(f"<div class='history-item'><div><b>{real_idx+1}.</b> <span class='schedule-date'>{hist_date}</span>{item['p_name']}</div><div>✔️ <b>{item['count']}</b> / {item['target']} EA</div></div>", unsafe_allow_html=True)
-            with readd_col:
-                if st.button("🔄", key=f"readd_hist_{m_name}_{real_idx}"):
-                    if m.get('p_name', '---') == '---':
-                        m.update({'p_name': item['p_name'], 'target': item['target'], 'count': 0, 'is_running': False, 'last_time': time.time()})
-                        clear_widget_state(m_name); st.success("장착 완료!")
-                    else:
-                        if 'schedule' not in m: m['schedule'] = []
-                        m['schedule'].append({'p_name': item['p_name'], 'target': item['target'], 'date': '추가생산'})
-                        st.success("대기열 추가 완료")
-                    save_machine_data(st.session_state.m_states); time.sleep(1); st.rerun()
-        if st.button("🗑️ 내역 모두 지우기", key=f"clear_hist_{m_name}", use_container_width=True): m['history'] = []; save_machine_data(st.session_state.m_states); st.rerun()
-
-def make_machine_card(m_name):
+# --- 💡 핵심 변경: 모든 것을 '하나의 박스' 안에서 처리하는 함수 ---
+def render_unified_machine_card(m_name):
     now = time.time()
     m = st.session_state.m_states[m_name]
     is_run = m.get('is_running', False)
@@ -260,6 +175,7 @@ def make_machine_card(m_name):
     weight = master_info.get("weight", 0.0)
     cycle = master_info.get("cycle_time", 10)
 
+    # 카운트 증가 로직
     if is_run and cycle > 0:
         elapsed = now - float(m.get('last_time', now))
         if elapsed >= cycle:
@@ -301,58 +217,140 @@ def make_machine_card(m_name):
 
     raw_memo = m.get('memo', ''); memo_text = str(raw_memo).strip() if pd.notna(raw_memo) and str(raw_memo).lower() != 'nan' else ''
     memo_html = f"<div class='card-memo'>📌 {memo_text}</div>" if memo_text else ""
-    p_code_html = f"<span style='color:#86868b; font-size:16px; margin-right:6px; font-weight:700;'>[{p_code}]</span>" if p_code else ""
+    p_code_html = f"<span style='color:#86868b; font-size:15px; margin-right:6px; font-weight:700;'>[{p_code}]</span>" if p_code else ""
     color_html = f"<span class='product-tag'>🎨 {color_text}</span>" if color_text else ""
     weight_html = f"<span class='product-tag'>⚖️ {weight}g</span>" if weight > 0 else ""
 
-    st.markdown(f"""
-<div class="modern-card">
-<div class="card-title"><span>🤖 {m_name}</span><div class='status-container'><span class='status-dot {status_class}'></span><span class='status-text {text_class}'>{status_text}</span></div></div>
-<div class="card-product">{p_code_html} {safe_p_name} {color_html} {weight_html}</div>
-{next_color_html}{memo_html}
-<div class="card-metrics">
-<div class="modern-metric"><div class="metric-label">생산량(EA)</div><div class="metric-value">{count_val} / {target_val}</div></div>
-<div class="modern-metric"><div class="metric-label">원료(kg)</div><div class="metric-value">{total_weight_kg:,.1f}</div></div>
-<div class="modern-metric"><div class="metric-label">남은 시간</div><div class="metric-value time-value">{time_str}</div></div>
-<div class="modern-metric"><div class="metric-label">달성률</div><div class="metric-value">{rate}%</div></div>
-</div></div>
-""", unsafe_allow_html=True)
-    
-    c1, c2, c3 = st.columns(3)
-    if target_val > 0 and count_val >= target_val:
-        if c1.button("⏭️ NEXT", key=f"next_{m_name}"):
-            if m['p_name'] != "---":
-                if 'history' not in m: m['history'] = []
-                m['history'].append({'p_name': m['p_name'], 'target': m['target'], 'count': m['count'], 'date': time.strftime("%H:%M")})
-            if m.get('schedule'):
-                first_job = m['schedule'].pop(0)
-                m.update({'p_name': first_job['p_name'], 'target': first_job['target'], 'count': 0, 'is_running': False, 'last_time': time.time()})
-            else: m.update({'p_name': "---", 'target': 1000, 'count': 0, 'is_running': False})
-            clear_widget_state(m_name); save_machine_data(st.session_state.m_states); st.rerun()
-        if c2.button("🔄 리셋", key=f"reset_{m_name}"):
-            m['count'] = 0; m['is_running'] = False; m['last_time'] = time.time()
-            clear_widget_state(m_name); save_machine_data(st.session_state.m_states); st.rerun()
-    else:
-        if c1.button("▶️ START", key=f"run_{m_name}"):
-            if m.get('p_name', '---') == '---':
+    is_open = (st.session_state.selected_machine == m_name)
+
+    # ✅ 스트림릿 컨테이너로 감싸서 '하나의 박스'처럼 만듭니다.
+    with st.container(border=True):
+        # 1. 기계 정보 HTML 렌더링
+        st.markdown(f"""
+        <div class="machine-title"><span>🤖 {m_name}</span><div class='status-container'><span class='status-dot {status_class}'></span><span class='status-text {text_class}'>{status_text}</span></div></div>
+        <div class="card-product">{p_code_html} {safe_p_name} {color_html} {weight_html}</div>
+        {next_color_html}{memo_html}
+        <div class="card-metrics">
+        <div class="modern-metric"><div class="metric-label">생산량(EA)</div><div class="metric-value">{count_val} / {target_val}</div></div>
+        <div class="modern-metric"><div class="metric-label">원료(kg)</div><div class="metric-value">{total_weight_kg:,.1f}</div></div>
+        <div class="modern-metric"><div class="metric-label">남은 시간</div><div class="metric-value time-value">{time_str}</div></div>
+        <div class="modern-metric"><div class="metric-label">달성률</div><div class="metric-value">{rate}%</div></div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        # 2. 제어 버튼들을 기계 정보 바로 밑에 나란히 배치
+        c1, c2, c3 = st.columns(3)
+        if target_val > 0 and count_val >= target_val:
+            if c1.button("⏭️ NEXT", key=f"next_{m_name}", use_container_width=True):
+                if m['p_name'] != "---":
+                    if 'history' not in m: m['history'] = []
+                    m['history'].append({'p_name': m['p_name'], 'target': m['target'], 'count': m['count'], 'date': time.strftime("%H:%M")})
                 if m.get('schedule'):
                     first_job = m['schedule'].pop(0)
-                    m.update({'p_name': first_job['p_name'], 'target': first_job['target'], 'count': 0, 'is_running': True, 'last_time': time.time()})
-                    clear_widget_state(m_name)
-            else: m['is_running'] = True; m['last_time'] = time.time()
-            save_machine_data(st.session_state.m_states); st.rerun()
-        if c2.button("⏸️ STOP", key=f"stop_{m_name}"):
-            m['is_running'] = False; save_machine_data(st.session_state.m_states); st.rerun()
-    
-    # 디테일 버튼을 '열기/닫기' 토글 버튼으로 변경
-    is_open = (st.session_state.selected_machine == m_name)
-    btn_text = "🔼 닫기" if is_open else "⚙️ Details"
-    if c3.button(btn_text, key=f"det_{m_name}"):
-        if is_open:
-            st.session_state.selected_machine = None
+                    m.update({'p_name': first_job['p_name'], 'target': first_job['target'], 'count': 0, 'is_running': False, 'last_time': time.time()})
+                else: m.update({'p_name': "---", 'target': 1000, 'count': 0, 'is_running': False})
+                clear_widget_state(m_name); save_machine_data(st.session_state.m_states); st.rerun()
+            if c2.button("🔄 리셋", key=f"reset_{m_name}", use_container_width=True):
+                m['count'] = 0; m['is_running'] = False; m['last_time'] = time.time()
+                clear_widget_state(m_name); save_machine_data(st.session_state.m_states); st.rerun()
         else:
-            st.session_state.selected_machine = m_name
-        st.rerun()
+            if c1.button("▶️ START", key=f"run_{m_name}", use_container_width=True):
+                if m.get('p_name', '---') == '---':
+                    if m.get('schedule'):
+                        first_job = m['schedule'].pop(0)
+                        m.update({'p_name': first_job['p_name'], 'target': first_job['target'], 'count': 0, 'is_running': True, 'last_time': time.time()})
+                        clear_widget_state(m_name)
+                else: m['is_running'] = True; m['last_time'] = time.time()
+                save_machine_data(st.session_state.m_states); st.rerun()
+            if c2.button("⏸️ STOP", key=f"stop_{m_name}", use_container_width=True):
+                m['is_running'] = False; save_machine_data(st.session_state.m_states); st.rerun()
+        
+        # 3. 더보기(아코디언) 토글 버튼
+        btn_text = "🔼 닫기" if is_open else "🔽 더보기"
+        if c3.button(btn_text, key=f"det_toggle_{m_name}", use_container_width=True):
+            if is_open: st.session_state.selected_machine = None
+            else: st.session_state.selected_machine = m_name
+            st.rerun()
+
+        # 4. 더보기를 눌렀을 때만 박스 안에서 아래로 쭈욱 열리는 디테일 패널
+        if is_open:
+            st.divider() # 경계선 추가
+            st.markdown("**📝 특이사항 메모**")
+            raw_memo = m.get('memo', '')
+            safe_memo = str(raw_memo) if pd.notna(raw_memo) and str(raw_memo).lower() != 'nan' else ''
+            new_memo = st.text_area("메모 입력", value=safe_memo, height=68, key=f"det_memo_{m_name}", label_visibility="collapsed")
+            if st.button("메모 저장", key=f"det_save_memo_{m_name}", use_container_width=True):
+                m['memo'] = new_memo; save_machine_data(st.session_state.m_states); st.success("메모 반영 완료"); st.rerun()
+                
+            st.write("---")
+            st.markdown("**⚙️ 현재 제품 및 수량 설정**")
+            p_name = str(m.get('p_name', '---'))
+            if p_name.lower() == 'nan': p_name = '---'
+            if p_name not in st.session_state.master_data:
+                st.session_state.master_data[p_name] = {"p_code": "", "color_text": "", "weight": 0.0, "cycle_time": 10}
+                save_master_data(st.session_state.master_data)
+            
+            p_index = list(st.session_state.master_data.keys()).index(p_name)
+            selected_p_name = st.selectbox("현재 제품", list(st.session_state.master_data.keys()), index=p_index, key=f"det_p_{m_name}")
+            col_t, col_c = st.columns(2)
+            with col_t: new_target = st.number_input("목표 수량", min_value=1, value=int(m.get('target', 1000)), key=f"det_t_{m_name}")
+            with col_c: new_count = st.number_input("현재 생산량", min_value=0, value=int(m.get('count', 0)), key=f"det_c_{m_name}")
+            
+            c_btn1, c_btn2, c_btn3 = st.columns(3)
+            with c_btn1:
+                if st.button("설정 적용", key=f"det_upd_p_{m_name}", use_container_width=True):
+                    m['p_name'] = selected_p_name; m['target'] = new_target; m['count'] = new_count if new_count <= new_target else new_target; m['last_time'] = time.time()
+                    clear_widget_state(m_name); save_machine_data(st.session_state.m_states); st.rerun()
+            with c_btn2:
+                if st.button("수량 리셋", key=f"det_rst_{m_name}", use_container_width=True):
+                    m['count'] = 0; m['last_time'] = time.time()
+                    clear_widget_state(m_name); save_machine_data(st.session_state.m_states); st.rerun()
+            with c_btn3:
+                if st.button("⏭️ 당겨오기", key=f"det_next_job_{m_name}", use_container_width=True):
+                    if m['p_name'] != "---":
+                        if 'history' not in m: m['history'] = []
+                        m['history'].append({'p_name': m['p_name'], 'target': m['target'], 'count': m['count'], 'date': time.strftime("%H:%M")})
+                    if m.get('schedule'):
+                        first_job = m['schedule'].pop(0)
+                        m.update({'p_name': first_job['p_name'], 'target': first_job['target'], 'count': 0, 'is_running': False, 'last_time': time.time()})
+                    else:
+                        m.update({'p_name': "---", 'target': 1000, 'count': 0, 'is_running': False})
+                    clear_widget_state(m_name); save_machine_data(st.session_state.m_states); st.rerun()
+
+            st.write("---")
+            st.markdown("**📋 대기열**")
+            schedule = m.get('schedule', [])
+            if not schedule: st.info("대기 일정이 없습니다.")
+            else:
+                for idx, item in enumerate(schedule):
+                    date_str = f"[{item['date']}] " if 'date' in item and item['date'] else ""
+                    sch_col, del_col = st.columns([5, 1])
+                    with sch_col: st.markdown(f"<div class='schedule-item'><div><b>{idx+1}.</b> <span class='schedule-date'>{date_str}</span>{item['p_name']}</div><div>🎯 <b>{item['target']}</b> EA</div></div>", unsafe_allow_html=True)
+                    with del_col:
+                        if st.button("❌", key=f"del_sch_{m_name}_{idx}"):
+                            m['schedule'].pop(idx); save_machine_data(st.session_state.m_states); st.rerun()
+
+            st.write("---")
+            st.markdown("**✅ 완료 내역**")
+            history = m.get('history', [])
+            if not history: st.info("아직 내역이 없습니다.")
+            else:
+                for idx, item in enumerate(reversed(history)):
+                    real_idx = len(history) - 1 - idx
+                    hist_date = f"[{item.get('date', '')}]"
+                    hist_col, readd_col = st.columns([5, 1])
+                    with hist_col: st.markdown(f"<div class='history-item'><div><b>{real_idx+1}.</b> <span class='schedule-date'>{hist_date}</span>{item['p_name']}</div><div>✔️ <b>{item['count']}</b> / {item['target']} EA</div></div>", unsafe_allow_html=True)
+                    with readd_col:
+                        if st.button("🔄", key=f"readd_hist_{m_name}_{real_idx}"):
+                            if m.get('p_name', '---') == '---':
+                                m.update({'p_name': item['p_name'], 'target': item['target'], 'count': 0, 'is_running': False, 'last_time': time.time()})
+                                clear_widget_state(m_name); st.success("장착 완료!")
+                            else:
+                                if 'schedule' not in m: m['schedule'] = []
+                                m['schedule'].append({'p_name': item['p_name'], 'target': item['target'], 'date': '추가생산'})
+                                st.success("대기열 추가 완료")
+                            save_machine_data(st.session_state.m_states); time.sleep(1); st.rerun()
+                if st.button("🗑️ 모두 지우기", key=f"clear_hist_{m_name}", use_container_width=True): m['history'] = []; save_machine_data(st.session_state.m_states); st.rerun()
 
 st.markdown("<div class='modern-header'>🤖 Factory OS: Production Line</div>", unsafe_allow_html=True)
 
@@ -366,43 +364,25 @@ t1, t3, t_plan, t_admin = st.tabs(["🏢 1층 생산라인", "🏢 3층 생산�
 f1_machines = sorted([k for k, v in st.session_state.m_states.items() if v.get('floor', 'F1') == 'F1'], key=get_machine_sort_key)
 f3_machines = sorted([k for k, v in st.session_state.m_states.items() if v.get('floor', 'F1') == 'F3'], key=get_machine_sort_key)
 
-# --- 💡 레이아웃 핵심 변경: 디테일 창을 오른쪽 단이 아니라 기계 바로 밑(인라인)에 렌더링 ---
 with t1:
     cols1 = st.columns(2)
     mid1 = len(f1_machines) // 2 + (len(f1_machines) % 2 > 0)
     with cols1[0]:
         for m_name in f1_machines[:mid1]:
-            make_machine_card(m_name)
-            # 디테일 버튼이 눌린 기계라면 바로 그 밑에 테두리를 쳐서 디테일 창 렌더링
-            if st.session_state.selected_machine == m_name:
-                with st.container(border=True):
-                    render_details_panel(m_name, st.session_state.m_states[m_name])
-            st.write("") # 기계 사이 간격
+            render_unified_machine_card(m_name)
     with cols1[1]:
         for m_name in f1_machines[mid1:]:
-            make_machine_card(m_name)
-            if st.session_state.selected_machine == m_name:
-                with st.container(border=True):
-                    render_details_panel(m_name, st.session_state.m_states[m_name])
-            st.write("")
+            render_unified_machine_card(m_name)
 
 with t3:
     cols3 = st.columns(2)
     mid3 = len(f3_machines) // 2 + (len(f3_machines) % 2 > 0)
     with cols3[0]:
         for m_name in f3_machines[:mid3]:
-            make_machine_card(m_name)
-            if st.session_state.selected_machine == m_name:
-                with st.container(border=True):
-                    render_details_panel(m_name, st.session_state.m_states[m_name])
-            st.write("")
+            render_unified_machine_card(m_name)
     with cols3[1]:
         for m_name in f3_machines[mid3:]:
-            make_machine_card(m_name)
-            if st.session_state.selected_machine == m_name:
-                with st.container(border=True):
-                    render_details_panel(m_name, st.session_state.m_states[m_name])
-            st.write("")
+            render_unified_machine_card(m_name)
 
 with t_plan:
     st.subheader("📅 스마트 공정 계획표 (엑셀 뷰)")
@@ -502,7 +482,6 @@ with t_admin:
             st.markdown("#### 🤖 기계 (Machine) 관리")
             with st.expander("➕ 새 기계 라인 추가", expanded=True):
                 new_m_name = st.text_input("추가할 기계 이름 (예: F1_5)")
-                # --- 💡 요청하신 층수 선택 기능 추가 완료! ---
                 new_m_floor = st.radio("설치 층수", ["F1", "F3"], horizontal=True)
                 if st.button("기계 추가하기"):
                     if new_m_name.strip() and new_m_name not in st.session_state.m_states:
