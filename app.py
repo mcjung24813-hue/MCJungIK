@@ -508,7 +508,8 @@ with st.sidebar:
         st.rerun()
 
 if auto_refresh:
-    time.sleep(5.0)
+    time.sleep(15.0)
     st.session_state.m_states = load_machine_data()
     st.session_state.master_data = load_master_data()
     st.rerun()
+
