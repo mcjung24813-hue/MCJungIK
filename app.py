@@ -20,6 +20,40 @@ ADMIN_PASSWORD = "1234"
 SHEET_ID = '1gDcLsO5PBfpG_9JCAWOWol_gJgubRU90STsZHGv9hq4' 
 # -------------------------------------------------------------
 
+# --- 💡 다국어(번역) 딕셔너리 ---
+if 'lang' not in st.session_state:
+    st.session_state.lang = 'KO'
+
+LANG_DICT = {
+    "대기중": "待機中", "생산중": "生産中", "생산완료": "生産完了", "작업 완료": "作業完了",
+    "생산량(EA)": "生産量(EA)", "원료(kg)": "原料(kg)", "남은 시간": "残り時間", "달성률": "達成率",
+    "▶️ START": "▶️ スタート", "⏸️ STOP": "⏸️ ストップ", "⏭️ NEXT": "⏭️ 次へ", "🔄 리셋": "🔄 リセット",
+    "🔽 더보기": "🔽 詳細", "🔼 닫기": "🔼 閉じる",
+    "📝 특이사항 메모": "📝 特記事項", "메모 입력": "メモ入力", "메모 저장": "保存",
+    "⚙️ 현재 제품 및 수량 설정": "⚙️ 現在の製品及び数量設定",
+    "현재 제품": "現在の製品", "목표 수량": "目標数量", "현재 생산량": "現在の生産量",
+    "설정 적용": "適用", "수량 리셋": "数量リセット", "⏭️ 당겨오기": "⏭️ 前倒し",
+    "📋 대기열": "📋 待機列", "✅ 완료 내역": "✅ 完了履歴", "🗑️ 모두 지우기": "🗑️ 全て消去",
+    "대기 일정이 없습니다.": "待機日程がありません。", "아직 내역이 없습니다.": "まだ履歴がありません。",
+    "장착 완료!": "装着完了!", "대기열 추가 완료": "待機列に追加完了",
+    "🏢 1층 생산라인": "🏢 1階 生産ライン", "🏢 3층 생산라인": "🏢 3階 生産ライン",
+    "📅 공정계획표": "📅 工程計画表", "⚙️ 기준 정보 관리": "⚙️ 基準情報管理",
+    "🔄 실시간 동기화 (PC ↔ 폰 상태 맞추기)": "🔄 リアルタイム同期 (PC ↔ スマホ)",
+    "시스템 설정": "システム設定", "실시간 자동 새로고침 켜기": "自動更新をオンにする",
+    "최신 데이터 동기화 (Sync)": "最新データ同期",
+    "※ 1층 도면 배치도에 포함되지 않은 기계들": "※ 1階配置図に含まれていない機械",
+    "스마트 공정 계획표 (엑셀 뷰)": "スマート工程計画表 (Excel View)",
+    "☑️ 완료된 공정 기록 숨기기 (진행/예정 항목만 앞으로 당겨서 보기)": "☑️ 完了した工程記録を隠す (進行/予定項目のみ表示)",
+    "✅ 일정이 자동 추가되었습니다!": "✅ 日程が自動追加されました！",
+    "로그인": "ログイン", "🔓 로그아웃": "🔓 ログアウト", "제품명 (필수)": "製品名 (必須)",
+    "제품 적용하기": "製品適用", "기계 추가하기": "機械追加", "선택 기계 영구 삭제": "選択機械の完全削除"
+}
+
+def _(text):
+    if st.session_state.lang == 'JA':
+        return LANG_DICT.get(text, text)
+    return text
+
 # --- 💡 구글 시트 데이터베이스 연동 함수 ---
 def get_gspread_client():
     scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
@@ -115,7 +149,6 @@ if 'is_admin' not in st.session_state: st.session_state.is_admin = False
 if 'master_data' not in st.session_state:
     loaded_master = load_master_data()
     if not loaded_master:
-        # 데이터 구조에 p_part_code(부품코드) 추가
         loaded_master = {"---": {"p_code": "-", "p_part_code": "-", "color_text": "-", "weight": 0.0, "cycle_time": 0}}
         save_master_data(loaded_master)
     st.session_state.master_data = loaded_master
@@ -149,7 +182,6 @@ if 'm_states' not in st.session_state:
                 except: v[col] = []
             elif not isinstance(raw_data, list): v[col] = []
         if current_p not in st.session_state.master_data:
-            # 기존 데이터 호환을 위해 없으면 빈 값으로 추가
             st.session_state.master_data[current_p] = {"p_code": "", "p_part_code": "", "color_text": "", "weight": 0.0, "cycle_time": 10}
             save_master_data(st.session_state.master_data)
     st.session_state.m_states = loaded_data
@@ -171,7 +203,7 @@ def render_unified_machine_card(m_name):
     
     master_info = st.session_state.master_data.get(safe_p_name, {})
     p_code = master_info.get("p_code", "")
-    p_part_code = master_info.get("p_part_code", "") # 부품코드 불러오기
+    p_part_code = master_info.get("p_part_code", "")
     color_text = master_info.get("color_text", "")
     weight = master_info.get("weight", 0.0)
     cycle = master_info.get("cycle_time", 10)
@@ -194,9 +226,9 @@ def render_unified_machine_card(m_name):
     if count_val > target_val: count_val = target_val; m['count'] = count_val
     is_run_val = m.get('is_running', False)
     
-    if target_val > 0 and count_val >= target_val: status_class = "status-completed"; status_text = "생산완료"; text_class = "text-completed"
-    elif is_run_val: status_class = "status-running"; status_text = "생산중"; text_class = "text-running"
-    else: status_class = "status-waiting"; status_text = "대기중"; text_class = "text-waiting"
+    if target_val > 0 and count_val >= target_val: status_class = "status-completed"; status_text = _("생산완료"); text_class = "text-completed"
+    elif is_run_val: status_class = "status-running"; status_text = _("생산중"); text_class = "text-running"
+    else: status_class = "status-waiting"; status_text = _("대기중"); text_class = "text-waiting"
 
     rate = round((count_val / target_val * 100), 1) if target_val > 0 else 0
     if rate > 100.0: rate = 100.0
@@ -205,7 +237,7 @@ def render_unified_machine_card(m_name):
     if cycle > 0 and count_val < target_val:
         rem_sec = (target_val - count_val) * cycle
         h, rem = divmod(rem_sec, 3600); time_str = f"{int(h):02d}:{int(rem//60):02d}:{int(rem%60):02d}"
-    elif count_val >= target_val and target_val > 0: time_str = "작업 완료"
+    elif count_val >= target_val and target_val > 0: time_str = _("작업 완료")
 
     total_weight_kg = (weight * target_val) / 1000.0
 
@@ -218,7 +250,6 @@ def render_unified_machine_card(m_name):
     raw_memo = m.get('memo', ''); memo_text = str(raw_memo).strip() if pd.notna(raw_memo) and str(raw_memo).lower() != 'nan' else ''
     memo_html = f"<div class='card-memo'>📌 {memo_text}</div>" if memo_text else ""
     
-    # 완제품코드와 부품코드 UI 표시
     p_code_html = f"<span style='color:#007aff; font-size:14px; margin-right:4px; font-weight:700;'>[완: {p_code}]</span>" if p_code else ""
     p_part_code_html = f"<span style='color:#ff9500; font-size:14px; margin-right:6px; font-weight:700;'>[부: {p_part_code}]</span>" if p_part_code else ""
     color_html = f"<span class='product-tag'>🎨 {color_text}</span>" if color_text else ""
@@ -232,16 +263,16 @@ def render_unified_machine_card(m_name):
         <div class="card-product"><div>{p_code_html}{p_part_code_html} {safe_p_name}</div> {color_html} {weight_html}</div>
         {next_color_html}{memo_html}
         <div class="card-metrics">
-        <div class="modern-metric"><div class="metric-label">생산량(EA)</div><div class="metric-value">{count_val} / {target_val}</div></div>
-        <div class="modern-metric"><div class="metric-label">원료(kg)</div><div class="metric-value">{total_weight_kg:,.1f}</div></div>
-        <div class="modern-metric"><div class="metric-label">남은 시간</div><div class="metric-value time-value">{time_str}</div></div>
-        <div class="modern-metric"><div class="metric-label">달성률</div><div class="metric-value">{rate}%</div></div>
+        <div class="modern-metric"><div class="metric-label">{_('생산량(EA)')}</div><div class="metric-value">{count_val} / {target_val}</div></div>
+        <div class="modern-metric"><div class="metric-label">{_('원료(kg)')}</div><div class="metric-value">{total_weight_kg:,.1f}</div></div>
+        <div class="modern-metric"><div class="metric-label">{_('남은 시간')}</div><div class="metric-value time-value">{time_str}</div></div>
+        <div class="modern-metric"><div class="metric-label">{_('달성률')}</div><div class="metric-value">{rate}%</div></div>
         </div>
         """, unsafe_allow_html=True)
 
         c1, c2, c3 = st.columns(3)
         if target_val > 0 and count_val >= target_val:
-            if c1.button("⏭️ NEXT", key=f"next_{m_name}", use_container_width=True):
+            if c1.button(_("⏭️ NEXT"), key=f"next_{m_name}", use_container_width=True):
                 if m['p_name'] != "---":
                     if 'history' not in m: m['history'] = []
                     m['history'].append({'p_name': m['p_name'], 'target': m['target'], 'count': m['count'], 'date': time.strftime("%H:%M")})
@@ -250,11 +281,11 @@ def render_unified_machine_card(m_name):
                     m.update({'p_name': first_job['p_name'], 'target': first_job['target'], 'count': 0, 'is_running': False, 'last_time': time.time()})
                 else: m.update({'p_name': "---", 'target': 1000, 'count': 0, 'is_running': False})
                 clear_widget_state(m_name); save_machine_data(st.session_state.m_states); st.rerun()
-            if c2.button("🔄 리셋", key=f"reset_{m_name}", use_container_width=True):
+            if c2.button(_("🔄 리셋"), key=f"reset_{m_name}", use_container_width=True):
                 m['count'] = 0; m['is_running'] = False; m['last_time'] = time.time()
                 clear_widget_state(m_name); save_machine_data(st.session_state.m_states); st.rerun()
         else:
-            if c1.button("▶️ START", key=f"run_{m_name}", use_container_width=True):
+            if c1.button(_("▶️ START"), key=f"run_{m_name}", use_container_width=True):
                 if m.get('p_name', '---') == '---':
                     if m.get('schedule'):
                         first_job = m['schedule'].pop(0)
@@ -262,10 +293,10 @@ def render_unified_machine_card(m_name):
                         clear_widget_state(m_name)
                 else: m['is_running'] = True; m['last_time'] = time.time()
                 save_machine_data(st.session_state.m_states); st.rerun()
-            if c2.button("⏸️ STOP", key=f"stop_{m_name}", use_container_width=True):
+            if c2.button(_("⏸️ STOP"), key=f"stop_{m_name}", use_container_width=True):
                 m['is_running'] = False; save_machine_data(st.session_state.m_states); st.rerun()
         
-        btn_text = "🔼 닫기" if is_open else "🔽 더보기"
+        btn_text = _("🔼 닫기") if is_open else _("🔽 더보기")
         if c3.button(btn_text, key=f"det_toggle_{m_name}", use_container_width=True):
             if is_open: st.session_state.selected_machine = None
             else: st.session_state.selected_machine = m_name
@@ -273,15 +304,15 @@ def render_unified_machine_card(m_name):
 
         if is_open:
             st.divider() 
-            st.markdown("**📝 특이사항 메모**")
+            st.markdown(f"**{_('📝 특이사항 메모')}**")
             raw_memo = m.get('memo', '')
             safe_memo = str(raw_memo) if pd.notna(raw_memo) and str(raw_memo).lower() != 'nan' else ''
-            new_memo = st.text_area("메모 입력", value=safe_memo, height=68, key=f"det_memo_{m_name}", label_visibility="collapsed")
-            if st.button("메모 저장", key=f"det_save_memo_{m_name}", use_container_width=True):
-                m['memo'] = new_memo; save_machine_data(st.session_state.m_states); st.success("메모 반영 완료"); st.rerun()
+            new_memo = st.text_area(_("메모 입력"), value=safe_memo, height=68, key=f"det_memo_{m_name}", label_visibility="collapsed")
+            if st.button(_("메모 저장"), key=f"det_save_memo_{m_name}", use_container_width=True):
+                m['memo'] = new_memo; save_machine_data(st.session_state.m_states); st.success("OK"); st.rerun()
                 
             st.write("---")
-            st.markdown("**⚙️ 현재 제품 및 수량 설정**")
+            st.markdown(f"**{_('⚙️ 현재 제품 및 수량 설정')}**")
             p_name = str(m.get('p_name', '---'))
             if p_name.lower() == 'nan': p_name = '---'
             if p_name not in st.session_state.master_data:
@@ -289,22 +320,22 @@ def render_unified_machine_card(m_name):
                 save_master_data(st.session_state.master_data)
             
             p_index = list(st.session_state.master_data.keys()).index(p_name)
-            selected_p_name = st.selectbox("현재 제품", list(st.session_state.master_data.keys()), index=p_index, key=f"det_p_{m_name}")
+            selected_p_name = st.selectbox(_("현재 제품"), list(st.session_state.master_data.keys()), index=p_index, key=f"det_p_{m_name}")
             col_t, col_c = st.columns(2)
-            with col_t: new_target = st.number_input("목표 수량", min_value=1, value=int(m.get('target', 1000)), key=f"det_t_{m_name}")
-            with col_c: new_count = st.number_input("현재 생산량", min_value=0, value=int(m.get('count', 0)), key=f"det_c_{m_name}")
+            with col_t: new_target = st.number_input(_("목표 수량"), min_value=1, value=int(m.get('target', 1000)), key=f"det_t_{m_name}")
+            with col_c: new_count = st.number_input(_("현재 생산량"), min_value=0, value=int(m.get('count', 0)), key=f"det_c_{m_name}")
             
             c_btn1, c_btn2, c_btn3 = st.columns(3)
             with c_btn1:
-                if st.button("설정 적용", key=f"det_upd_p_{m_name}", use_container_width=True):
+                if st.button(_("설정 적용"), key=f"det_upd_p_{m_name}", use_container_width=True):
                     m['p_name'] = selected_p_name; m['target'] = new_target; m['count'] = new_count if new_count <= new_target else new_target; m['last_time'] = time.time()
                     clear_widget_state(m_name); save_machine_data(st.session_state.m_states); st.rerun()
             with c_btn2:
-                if st.button("수량 리셋", key=f"det_rst_{m_name}", use_container_width=True):
+                if st.button(_("수량 리셋"), key=f"det_rst_{m_name}", use_container_width=True):
                     m['count'] = 0; m['last_time'] = time.time()
                     clear_widget_state(m_name); save_machine_data(st.session_state.m_states); st.rerun()
             with c_btn3:
-                if st.button("⏭️ 당겨오기", key=f"det_next_job_{m_name}", use_container_width=True):
+                if st.button(_("⏭️ 당겨오기"), key=f"det_next_job_{m_name}", use_container_width=True):
                     if m['p_name'] != "---":
                         if 'history' not in m: m['history'] = []
                         m['history'].append({'p_name': m['p_name'], 'target': m['target'], 'count': m['count'], 'date': time.strftime("%H:%M")})
@@ -316,9 +347,9 @@ def render_unified_machine_card(m_name):
                     clear_widget_state(m_name); save_machine_data(st.session_state.m_states); st.rerun()
 
             st.write("---")
-            st.markdown("**📋 대기열**")
+            st.markdown(f"**{_('📋 대기열')}**")
             schedule = m.get('schedule', [])
-            if not schedule: st.info("대기 일정이 없습니다.")
+            if not schedule: st.info(_("대기 일정이 없습니다."))
             else:
                 for idx, item in enumerate(schedule):
                     date_str = f"[{item['date']}] " if 'date' in item and item['date'] else ""
@@ -329,9 +360,9 @@ def render_unified_machine_card(m_name):
                             m['schedule'].pop(idx); save_machine_data(st.session_state.m_states); st.rerun()
 
             st.write("---")
-            st.markdown("**✅ 완료 내역**")
+            st.markdown(f"**{_('✅ 완료 내역')}**")
             history = m.get('history', [])
-            if not history: st.info("아직 내역이 없습니다.")
+            if not history: st.info(_("아직 내역이 없습니다."))
             else:
                 for idx, item in enumerate(reversed(history)):
                     real_idx = len(history) - 1 - idx
@@ -342,40 +373,51 @@ def render_unified_machine_card(m_name):
                         if st.button("🔄", key=f"readd_hist_{m_name}_{real_idx}"):
                             if m.get('p_name', '---') == '---':
                                 m.update({'p_name': item['p_name'], 'target': item['target'], 'count': 0, 'is_running': False, 'last_time': time.time()})
-                                clear_widget_state(m_name); st.success("장착 완료!")
+                                clear_widget_state(m_name); st.success(_("장착 완료!"))
                             else:
                                 if 'schedule' not in m: m['schedule'] = []
                                 m['schedule'].append({'p_name': item['p_name'], 'target': item['target'], 'date': '추가생산'})
-                                st.success("대기열 추가 완료")
+                                st.success(_("대기열 추가 완료"))
                             save_machine_data(st.session_state.m_states); time.sleep(1); st.rerun()
-                if st.button("🗑️ 모두 지우기", key=f"clear_hist_{m_name}", use_container_width=True): m['history'] = []; save_machine_data(st.session_state.m_states); st.rerun()
+                if st.button(_("🗑️ 모두 지우기"), key=f"clear_hist_{m_name}", use_container_width=True): m['history'] = []; save_machine_data(st.session_state.m_states); st.rerun()
+
+
+# --- 사이드바 번역 설정 ---
+with st.sidebar:
+    st.markdown(f"### ⚙️ {_('시스템 설정')}")
+    lang_mode = st.radio("🌐 언어 / 言語", ["🇰🇷 한국어", "🇯🇵 日本語"], horizontal=True)
+    if "日本語" in lang_mode and st.session_state.lang != 'JA':
+        st.session_state.lang = 'JA'
+        st.rerun()
+    elif "한국어" in lang_mode and st.session_state.lang != 'KO':
+        st.session_state.lang = 'KO'
+        st.rerun()
+        
+    auto_refresh = st.checkbox(_("실시간 자동 새로고침 켜기"), value=True)
+    st.markdown("---")
+    if st.button(_("🔄 최신 데이터 동기화 (Sync)")):
+        st.session_state.m_states = load_machine_data()
+        st.session_state.master_data = load_master_data()
+        st.rerun()
 
 st.markdown("<div class='modern-header'>🤖 Factory OS: Production Line</div>", unsafe_allow_html=True)
 
-if st.button("🔄 실시간 동기화 (PC ↔ 폰 상태 맞추기)", use_container_width=True):
+if st.button(_("🔄 실시간 동기화 (PC ↔ 폰 상태 맞추기)"), use_container_width=True):
     st.session_state.m_states = load_machine_data()
     st.session_state.master_data = load_master_data()
     st.rerun()
 
-t1, t3, t_plan, t_admin = st.tabs(["🏢 1층 생산라인", "🏢 3층 생산라인", "📅 공정계획표", "⚙️ 기준 정보 관리"])
+t1, t3, t_plan, t_admin = st.tabs([_("🏢 1층 생산라인"), _("🏢 3층 생산라인"), _("📅 공정계획표"), _("⚙️ 기준 정보 관리")])
 
 f1_machines = sorted([k for k, v in st.session_state.m_states.items() if v.get('floor', 'F1') == 'F1'], key=get_machine_sort_key)
 f3_machines = sorted([k for k, v in st.session_state.m_states.items() if v.get('floor', 'F1') == 'F3'], key=get_machine_sort_key)
 
 with t1:
     f1_layout_pairs = [
-        ("851", "854"),
-        ("852", "853"),
-        ("651", "654"),
-        ("652", "653"),
-        ("551", "5510"),
-        ("552", "559"),
-        ("553", "558"),
-        ("554", "557"),
-        ("655", "556"),
-        ("656", "555")
+        ("851", "854"), ("852", "853"), ("651", "654"), ("652", "653"),
+        ("551", "5510"), ("552", "559"), ("553", "558"), ("554", "557"),
+        ("655", "556"), ("656", "555")
     ]
-    
     layout_all_set = set()
 
     def find_real_name(target_num_str):
@@ -387,7 +429,6 @@ with t1:
     for left_num, right_num in f1_layout_pairs:
         real_left_m = find_real_name(left_num)
         real_right_m = find_real_name(right_num)
-        
         if real_left_m: layout_all_set.add(real_left_m)
         if real_right_m: layout_all_set.add(real_right_m)
         
@@ -400,7 +441,7 @@ with t1:
     leftovers = [m for m in f1_machines if m not in layout_all_set]
     if leftovers:
         st.markdown("---")
-        st.caption("※ 1층 도면 배치도에 포함되지 않은 기계들")
+        st.caption(_("※ 1층 도면 배치도에 포함되지 않은 기계들"))
         leftover_cols = st.columns(2)
         for idx, m_name in enumerate(leftovers):
             with leftover_cols[idx % 2]:
@@ -410,33 +451,26 @@ with t3:
     cols3 = st.columns(2)
     mid3 = len(f3_machines) // 2 + (len(f3_machines) % 2 > 0)
     with cols3[0]:
-        for m_name in f3_machines[:mid3]:
-            render_unified_machine_card(m_name)
+        for m_name in f3_machines[:mid3]: render_unified_machine_card(m_name)
     with cols3[1]:
-        for m_name in f3_machines[mid3:]:
-            render_unified_machine_card(m_name)
+        for m_name in f3_machines[mid3:]: render_unified_machine_card(m_name)
 
-# --- 공정계획표 탭 ---
 with t_plan:
-    st.subheader("📅 스마트 공정 계획표 (엑셀 뷰)")
-    hide_history = st.checkbox("☑️ 완료된 공정 기록 숨기기 (진행/예정 항목만 앞으로 당겨서 보기)", value=True)
-    st.info("✨ 표 오른쪽의 빈칸을 더블클릭하고 **완제품코드 또는 부품코드**를 입력 후 엔터를 치면 일정이 쏙 들어갑니다! (수량 지정: `코드/수량`)")
+    st.subheader(f"📅 {_('스마트 공정 계획표 (엑셀 뷰)')}")
+    hide_history = st.checkbox(_("☑️ 완료된 공정 기록 숨기기 (진행/예정 항목만 앞으로 당겨서 보기)"), value=True)
     
     def build_table_data(machines_list, hide_hist):
         max_cols = 0; raw_table_data = []
         for m_name in machines_list:
             m = st.session_state.m_states[m_name]; tasks = []
-            
             if not hide_hist:
-                for h in m.get('history', []): tasks.append(f"✅[완료] {h['p_name']} ({h['count']}EA)")
-                
+                for h in m.get('history', []): tasks.append(f"✅[{_('완료')}] {h['p_name']} ({h['count']}EA)")
             curr_p = m.get('p_name', '---')
             if curr_p != '---':
-                status_text = "🔄[생산중]" if m.get('is_running', False) else "⏸️[대기중]"
-                if int(m.get('count', 0)) >= int(m.get('target', 1)): status_text = "✅[완료대기]"
+                status_text = f"🔄[{_('생산중')}]" if m.get('is_running', False) else f"⏸️[{_('대기중')}]"
+                if int(m.get('count', 0)) >= int(m.get('target', 1)): status_text = f"✅[{_('생산완료')}]"
                 tasks.append(f"{status_text} {curr_p} ({int(m.get('count',0))}/{m.get('target')}EA)")
             for sch in m.get('schedule', []): tasks.append(f"⏳[예정] {sch['p_name']} ({sch['target']}EA)")
-            
             max_cols = max(max_cols, len(tasks)); raw_table_data.append({"기계명": m_name, "tasks": tasks})
             
         display_cols = max_cols + 3; df_list = []
@@ -446,11 +480,11 @@ with t_plan:
             df_list.append(d)
         return pd.DataFrame(df_list), display_cols
 
-    st.markdown("### 🏢 1층 공정 계획표")
+    st.markdown(f"### {_('🏢 1층 생산라인')}")
     df_f1, cols_f1 = build_table_data(f1_machines, hide_history)
     edited_df_f1 = st.data_editor(df_f1, use_container_width=True, hide_index=True, key="editor_f1")
 
-    st.markdown("### 🏢 3층 공정 계획표")
+    st.markdown(f"### {_('🏢 3층 생산라인')}")
     df_f3, cols_f3 = build_table_data(f3_machines, hide_history)
     edited_df_f3 = st.data_editor(df_f3, use_container_width=True, hide_index=True, key="editor_f3")
     
@@ -473,7 +507,6 @@ with t_plan:
                     
                     matched_p_name = None
                     for p, info in st.session_state.master_data.items():
-                        # 완제품코드나 부품코드 둘 중 하나라도 일치하면 해당 제품으로 인식!
                         if info.get('p_code') == typed_str or info.get('p_part_code') == typed_str: 
                             matched_p_name = p; break
                             
@@ -486,47 +519,42 @@ with t_plan:
                         m['schedule'].append({'p_name': final_p_name, 'target': target_qty, 'date': time.strftime("%Y-%m-%d")})
                     changes_made = True
 
-    if changes_made: save_machine_data(st.session_state.m_states); st.success("✅ 일정이 자동 추가되었습니다!"); time.sleep(1); st.rerun()
+    if changes_made: save_machine_data(st.session_state.m_states); st.success(_("✅ 일정이 자동 추가되었습니다!")); time.sleep(1); st.rerun()
 
-# --- 기준 정보 관리(설정) 탭 ---
 with t_admin:
-    st.subheader("⚙️ 시스템 기준 정보 관리")
+    st.subheader(f"⚙️ {_('시스템 설정')}")
     if not st.session_state.is_admin:
-        st.info("🔒 데이터를 수정하려면 관리자 권한이 필요합니다.")
         col_login1, col_login2 = st.columns([1, 2])
         with col_login1:
-            pwd = st.text_input("관리자 비밀번호", type="password")
-            if st.button("로그인"):
-                if pwd == ADMIN_PASSWORD: st.session_state.is_admin = True; st.success("✅ 로그인 성공!"); time.sleep(0.5); st.rerun()
-                else: st.error("❌ 비밀번호가 틀렸습니다.")
-        st.write("---"); st.markdown("#### 📋 현재 등록된 제품 목록")
+            pwd = st.text_input("Password", type="password")
+            if st.button(_("로그인")):
+                if pwd == ADMIN_PASSWORD: st.session_state.is_admin = True; st.success("OK"); time.sleep(0.5); st.rerun()
+        st.write("---"); st.markdown("#### 📋 제품 목록 (Product List)")
         master_list = [{"완제품코드": info.get("p_code", ""), "부품코드": info.get("p_part_code", ""), "제품명": p_name, "컬러": info.get("color_text", ""), "무게(g)": info.get("weight", 0.0), "사이클속도(초)": info.get("cycle_time", 10)} for p_name, info in st.session_state.master_data.items()]
         st.dataframe(pd.DataFrame(master_list), use_container_width=True)
     else:
-        if st.button("🔓 로그아웃"): st.session_state.is_admin = False; st.rerun()
+        if st.button(_("🔓 로그아웃")): st.session_state.is_admin = False; st.rerun()
         st.write("---")
         
-        st.markdown("#### 📦 제품 (Master Data) 관리")
+        st.markdown("#### 📦 Master Data")
         with st.expander("➕ 제품 등록 및 수정", expanded=True):
-            # 입력 항목이 많아져서 2줄로 깔끔하게 정리했습니다.
             col_m1, col_m2, col_m3 = st.columns(3)
             with col_m1: a_p_code = st.text_input("완제품코드")
             with col_m2: a_p_part_code = st.text_input("부품코드")
-            with col_m3: a_p_name = st.text_input("제품명 (필수)")
+            with col_m3: a_p_name = st.text_input(_("제품명 (필수)"))
             
             col_m4, col_m5, col_m6 = st.columns(3)
             with col_m4: a_p_color = st.text_input("컬러 텍스트 (예: 투명)")
             with col_m5: a_p_weight = st.number_input("무게 (g)", min_value=0.0, value=0.0, step=0.1)
             with col_m6: a_p_cycle = st.number_input("사이클 (초)", min_value=0, value=10)
             
-            if st.button("제품 적용하기"):
+            if st.button(_("제품 적용하기")):
                 if a_p_name.strip(): 
                     st.session_state.master_data[a_p_name] = {"p_code": a_p_code, "p_part_code": a_p_part_code, "color_text": a_p_color, "weight": a_p_weight, "cycle_time": a_p_cycle}
                     save_master_data(st.session_state.master_data)
-                    st.success("저장 완료!")
+                    st.success("OK")
                     time.sleep(1)
                     st.rerun()
-                else: st.warning("제품명은 필수입니다.")
                 
         st.write("---")
         master_list = [{"완제품코드": info.get("p_code", ""), "부품코드": info.get("p_part_code", ""), "제품명": p_name, "컬러": info.get("color_text", ""), "무게(g)": info.get("weight", 0.0), "사이클(초)": info.get("cycle_time", 10)} for p_name, info in st.session_state.master_data.items()]
@@ -537,12 +565,12 @@ with t_admin:
         with col_admin1:
             del_p_name = st.selectbox("삭제할 제품 선택", list(st.session_state.master_data.keys()))
             if st.button("선택 제품 영구 삭제"):
-                if del_p_name != "---": del st.session_state.master_data[del_p_name]; save_master_data(st.session_state.master_data); st.success("삭제 완료!"); time.sleep(1); st.rerun()
+                if del_p_name != "---": del st.session_state.master_data[del_p_name]; save_master_data(st.session_state.master_data); st.success("OK"); time.sleep(1); st.rerun()
         with col_admin2:
             with st.expander("➕ 새 기계 라인 추가", expanded=False):
-                new_m_name = st.text_input("추가할 기계 이름 (예: E-IN 851AD)")
+                new_m_name = st.text_input("기계 이름 (예: E-IN 851AD)")
                 new_m_floor = st.radio("설치 층수", ["F1", "F3"], horizontal=True)
-                if st.button("기계 추가하기"):
+                if st.button(_("기계 추가하기")):
                     if new_m_name.strip() and new_m_name not in st.session_state.m_states:
                         st.session_state.m_states[new_m_name] = {
                             'count': 0, 'last_time': time.time(), 'is_running': False, 
@@ -550,21 +578,11 @@ with t_admin:
                             'floor': new_m_floor, 'memo': ""
                         }
                         save_machine_data(st.session_state.m_states)
-                        st.success("생성 완료!")
+                        st.success("OK")
                         time.sleep(1)
                         st.rerun()
             del_m_name = st.selectbox("철거/삭제할 기계 선택", list(st.session_state.m_states.keys()))
-            if st.button("선택 기계 영구 삭제"): del st.session_state.m_states[del_m_name]; save_machine_data(st.session_state.m_states); st.success("철거 완료!"); time.sleep(1); st.rerun()
-
-with st.sidebar:
-    st.markdown("### ⚙️ 시스템 설정")
-    auto_refresh = st.checkbox("실시간 자동 새로고침 켜기", value=True)
-    st.markdown("---")
-    st.info("💡 PC ↔ 폰 상태가 다를 때 눌러주세요.")
-    if st.button("🔄 최신 데이터 동기화 (Sync)"):
-        st.session_state.m_states = load_machine_data()
-        st.session_state.master_data = load_master_data()
-        st.rerun()
+            if st.button(_("선택 기계 영구 삭제")): del st.session_state.m_states[del_m_name]; save_machine_data(st.session_state.m_states); st.success("OK"); time.sleep(1); st.rerun()
 
 if auto_refresh:
     time.sleep(15.0) 
