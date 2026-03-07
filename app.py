@@ -8,6 +8,7 @@ import ast
 import json
 import gspread
 import urllib.request
+from oauth2client.service_account import ServiceAccountCredentials # 👈 누락되었던 핵심 라이브러리 추가 완료!
 
 # --- 0. 페이지 설정 ---
 st.set_page_config(layout="wide", page_title="Factory OS - Cloud DB")
@@ -527,7 +528,7 @@ with t3:
         st.markdown("<span class='grid-marker'></span>", unsafe_allow_html=True)
         for m_name in f3_machines[mid3:]: render_unified_machine_card(m_name)
 
-# --- 💡 공정계획표 탭 (마스터 삭제/저장 기능 적용 및 컬러/원료량 추가) ---
+# --- 💡 공정계획표 탭 ---
 with t_plan:
     st.subheader(f"📅 {_('스마트 공정 계획표 (엑셀 뷰)')}")
     hide_history = st.checkbox(_("☑️ 완료된 공정 기록 숨기기 (진행/예정 항목만 앞으로 당겨서 보기)"), value=True)
@@ -539,7 +540,6 @@ with t_plan:
         for m_name in machines_list:
             m = st.session_state.m_states[m_name]; tasks = []
             
-            # 1. 완료 내역 문자열 생성
             if not hide_hist:
                 for h in m.get('history', []):
                     p_info = st.session_state.master_data.get(h['p_name'], {})
@@ -548,7 +548,6 @@ with t_plan:
                     kg = (p_info.get('weight', 0.0) * h['count']) / 1000.0
                     tasks.append(f"✅[{_('완료')}] {h['p_name']} {c_str}({h['count']}EA / {kg:,.1f}kg)")
                     
-            # 2. 현재 내역 문자열 생성
             curr_p = m.get('p_name', '---')
             if curr_p != '---':
                 status_text = f"🔄[{_('생산중')}]" if m.get('is_running', False) else f"⏸️[{_('대기중')}]"
@@ -559,7 +558,6 @@ with t_plan:
                 kg = (p_info.get('weight', 0.0) * int(m.get('target', 1))) / 1000.0
                 tasks.append(f"{status_text} {curr_p} {c_str}({int(m.get('count',0))}/{m.get('target')}EA / {kg:,.1f}kg)")
                 
-            # 3. 예정(대기열) 내역 문자열 생성
             for sch in m.get('schedule', []):
                 p_info = st.session_state.master_data.get(sch['p_name'], {})
                 c_txt = p_info.get('color_text', '')
@@ -594,7 +592,6 @@ with t_plan:
                 
                 edited_cells = [str(row[col]).strip() for col in e_df.columns if col != _('기계명') and str(row[col]).strip() != ""]
                 
-                # 표 내용 매칭 및 삭제 반영
                 if not hide_history:
                     kept_history = []
                     for h in m.get('history', []):
@@ -640,7 +637,6 @@ with t_plan:
                 if len(kept_schedule) != len(m.get('schedule', [])): changes = True
                 m['schedule'] = kept_schedule
                 
-                # 새롭게 추가된 코드 반영
                 for cell_val in edited_cells:
                     if not any(marker in cell_val for marker in ["✅", "🔄", "⏸️", "⏳"]):
                         typed_str = cell_val; target_qty = 1000 
@@ -701,12 +697,12 @@ with t_admin:
             
             col_m4, col_m5, col_m6 = st.columns(3)
             with col_m4: a_p_color = st.text_input(_("컬러 텍스트 (예: 투명)"))
-            with col_m5: a_p_number = st.number_input(_("무게(g)"), min_value=0.0, value=0.0, step=0.1)
+            with col_m5: a_p_weight = st.number_input(_("무게(g)"), min_value=0.0, value=0.0, step=0.1)
             with col_m6: a_p_cycle = st.number_input(_("사이클(초)"), min_value=0, value=10)
             
             if st.button(_("제품 적용하기")):
                 if a_p_name.strip(): 
-                    st.session_state.master_data[a_p_name] = {"p_code": a_p_code, "p_part_code": a_p_part_code, "color_text": a_p_color, "weight": a_p_number, "cycle_time": a_p_cycle}
+                    st.session_state.master_data[a_p_name] = {"p_code": a_p_code, "p_part_code": a_p_part_code, "color_text": a_p_color, "weight": a_p_weight, "cycle_time": a_p_cycle}
                     save_master_data(st.session_state.master_data)
                     st.success("OK")
                     time.sleep(1)
