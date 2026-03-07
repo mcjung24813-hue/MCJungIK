@@ -7,7 +7,7 @@ import re
 import ast
 import json
 import gspread
-from oauth2client.service_account import ServiceAccountCredentials
+import urllib.request
 
 # --- 0. 페이지 설정 ---
 st.set_page_config(layout="wide", page_title="Factory OS - Cloud DB")
@@ -62,13 +62,40 @@ LANG_DICT = {
     "📋 제품 목록 (Product List)": "📋 製品リスト (Product List)",
     "📦 Master Data": "📦 マスターデータ (Master Data)",
     "완료": "完了", "예정": "予定", "완": "完", "부": "部",
-    "🔒 데이터를 수정하려면 관리자 권한이 필요합니다.": "🔒 データを修正するには管理者権限が必要です。"
+    "🔒 데이터를 수정하려면 관리자 권한이 필요합니다.": "🔒 データを修正するには管理者権限が必要です。",
+    "📲 슬랙": "📲 Slack",
+    "⚠️ 스트림릿 Secrets에 SLACK_WEBHOOK_URL을 설정해주세요.": "⚠️ Streamlit SecretsにSLACK_WEBHOOK_URLを設定してください。",
+    "슬랙 알림 전송 완료!": "Slack通知を送信しました！"
 }
 
 def _(text):
     if st.session_state.lang == 'JA':
         return LANG_DICT.get(text, text)
     return text
+
+# --- 💡 슬랙 통신 함수 ---
+def send_slack_webhook(m_name, p_name, count):
+    try:
+        webhook_url = st.secrets.get("SLACK_WEBHOOK_URL")
+        if not webhook_url:
+            st.warning(_("⚠️ 스트림릿 Secrets에 SLACK_WEBHOOK_URL을 설정해주세요."))
+            return
+        
+        if st.session_state.lang == 'JA':
+            msg = f"🟢 *[生産完了]* 🤖 {m_name} 機械の '{p_name}' ({count}個) 生産が完了しました！"
+        else:
+            msg = f"🟢 *[생산완료]* 🤖 {m_name} 기계의 '{p_name}' ({count}개) 생산이 완료되었습니다!"
+            
+        data = json.dumps({"text": msg}).encode('utf-8')
+        req = urllib.request.Request(webhook_url, data=data, headers={'Content-Type': 'application/json'})
+        
+        with urllib.request.urlopen(req) as response:
+            if response.getcode() == 200:
+                st.toast(_("슬랙 알림 전송 완료!"), icon="✅")
+            else:
+                st.error(f"Slack API Error: {response.getcode()}")
+    except Exception as e:
+        st.error(f"Slack Error: {e}")
 
 # --- 💡 구글 시트 연동 ---
 def get_gspread_client():
@@ -306,8 +333,8 @@ def render_unified_machine_card(m_name):
         </div>
         """, unsafe_allow_html=True)
 
-        c_btn1, c_btn2 = st.columns(2)
         if target_val > 0 and count_val >= target_val:
+            c_btn1, c_btn2, c_btn3 = st.columns(3)
             with c_btn1:
                 if st.button(_("⏭️ NEXT"), key=f"next_{m_name}", use_container_width=True):
                     if m['p_name'] != "---":
@@ -322,7 +349,11 @@ def render_unified_machine_card(m_name):
                 if st.button(_("🔄 리셋"), key=f"reset_{m_name}", use_container_width=True):
                     m['count'] = 0; m['is_running'] = False; m['last_time'] = time.time()
                     clear_widget_state(m_name); save_machine_data(st.session_state.m_states); st.rerun()
+            with c_btn3:
+                if st.button(_("📲 슬랙"), key=f"slack_{m_name}", use_container_width=True):
+                    send_slack_webhook(m_name, safe_p_name, count_val)
         else:
+            c_btn1, c_btn2 = st.columns(2)
             with c_btn1:
                 if st.button(_("▶️ START"), key=f"run_{m_name}", use_container_width=True):
                     if m.get('p_name', '---') == '---':
@@ -418,7 +449,7 @@ def render_unified_machine_card(m_name):
                             save_machine_data(st.session_state.m_states); time.sleep(1); st.rerun()
                 if st.button(_("🗑️ 모두 지우기"), key=f"clear_hist_{m_name}", use_container_width=True): m['history'] = []; save_machine_data(st.session_state.m_states); st.rerun()
 
-# --- 사이드바 번역 설정 ---
+# --- 사이드바 설정 ---
 with st.sidebar:
     st.markdown(f"### ⚙️ {_('시스템 설정')}")
     lang_mode = st.radio("🌐 언어 / 言語", ["🇰🇷 한국어", "🇯🇵 日本語"], horizontal=True)
@@ -496,7 +527,7 @@ with t3:
         st.markdown("<span class='grid-marker'></span>", unsafe_allow_html=True)
         for m_name in f3_machines[mid3:]: render_unified_machine_card(m_name)
 
-# --- 💡 공정계획표 탭 (마스터 삭제/저장 기능 적용) ---
+# --- 💡 공정계획표 탭 (마스터 삭제/저장 기능 적용 및 컬러/원료량 추가) ---
 with t_plan:
     st.subheader(f"📅 {_('스마트 공정 계획표 (엑셀 뷰)')}")
     hide_history = st.checkbox(_("☑️ 완료된 공정 기록 숨기기 (진행/예정 항목만 앞으로 당겨서 보기)"), value=True)
@@ -507,14 +538,35 @@ with t_plan:
         max_cols = 0; raw_table_data = []
         for m_name in machines_list:
             m = st.session_state.m_states[m_name]; tasks = []
+            
+            # 1. 완료 내역 문자열 생성
             if not hide_hist:
-                for h in m.get('history', []): tasks.append(f"✅[{_('완료')}] {h['p_name']} ({h['count']}EA)")
+                for h in m.get('history', []):
+                    p_info = st.session_state.master_data.get(h['p_name'], {})
+                    c_txt = p_info.get('color_text', '')
+                    c_str = f"[{c_txt}] " if c_txt else ""
+                    kg = (p_info.get('weight', 0.0) * h['count']) / 1000.0
+                    tasks.append(f"✅[{_('완료')}] {h['p_name']} {c_str}({h['count']}EA / {kg:,.1f}kg)")
+                    
+            # 2. 현재 내역 문자열 생성
             curr_p = m.get('p_name', '---')
             if curr_p != '---':
                 status_text = f"🔄[{_('생산중')}]" if m.get('is_running', False) else f"⏸️[{_('대기중')}]"
                 if int(m.get('count', 0)) >= int(m.get('target', 1)): status_text = f"✅[{_('생산완료')}]"
-                tasks.append(f"{status_text} {curr_p} ({int(m.get('count',0))}/{m.get('target')}EA)")
-            for sch in m.get('schedule', []): tasks.append(f"⏳[{_('예정')}] {sch['p_name']} ({sch['target']}EA)")
+                p_info = st.session_state.master_data.get(curr_p, {})
+                c_txt = p_info.get('color_text', '')
+                c_str = f"[{c_txt}] " if c_txt else ""
+                kg = (p_info.get('weight', 0.0) * int(m.get('target', 1))) / 1000.0
+                tasks.append(f"{status_text} {curr_p} {c_str}({int(m.get('count',0))}/{m.get('target')}EA / {kg:,.1f}kg)")
+                
+            # 3. 예정(대기열) 내역 문자열 생성
+            for sch in m.get('schedule', []):
+                p_info = st.session_state.master_data.get(sch['p_name'], {})
+                c_txt = p_info.get('color_text', '')
+                c_str = f"[{c_txt}] " if c_txt else ""
+                kg = (p_info.get('weight', 0.0) * sch['target']) / 1000.0
+                tasks.append(f"⏳[{_('예정')}] {sch['p_name']} {c_str}({sch['target']}EA / {kg:,.1f}kg)")
+                
             max_cols = max(max_cols, len(tasks)); raw_table_data.append({"기계명": m_name, "tasks": tasks})
             
         display_cols = max_cols + 3; df_list = []
@@ -532,7 +584,6 @@ with t_plan:
     df_f3, cols_f3 = build_table_data(f3_machines, hide_history)
     edited_df_f3 = st.data_editor(df_f3, use_container_width=True, hide_index=True, key="editor_f3")
     
-    # 💡 한 번에 전체를 분석해서 삭제와 추가를 동시에 처리하는 강력한 저장 버튼!
     if st.button(_("💾 공정계획표 변경사항 저장 및 적용"), use_container_width=True):
         def process_df(e_df, m_list):
             changes = False
@@ -541,44 +592,55 @@ with t_plan:
                 if m_name not in st.session_state.m_states: continue
                 m = st.session_state.m_states[m_name]
                 
-                # 표에 남아있는 글씨들만 긁어모읍니다 (지운 칸은 제외됨)
                 edited_cells = [str(row[col]).strip() for col in e_df.columns if col != _('기계명') and str(row[col]).strip() != ""]
                 
-                # 1. 완료 기록 삭제 확인 (숨기기 모드가 아닐 때만 작동)
+                # 표 내용 매칭 및 삭제 반영
                 if not hide_history:
                     kept_history = []
                     for h in m.get('history', []):
-                        h_str = f"✅[{_('완료')}] {h['p_name']} ({h['count']}EA)"
+                        p_info = st.session_state.master_data.get(h['p_name'], {})
+                        c_txt = p_info.get('color_text', '')
+                        c_str = f"[{c_txt}] " if c_txt else ""
+                        kg = (p_info.get('weight', 0.0) * h['count']) / 1000.0
+                        h_str = f"✅[{_('완료')}] {h['p_name']} {c_str}({h['count']}EA / {kg:,.1f}kg)"
+                        
                         if h_str in edited_cells:
                             kept_history.append(h)
                             edited_cells.remove(h_str)
                     if len(kept_history) != len(m.get('history', [])): changes = True
                     m['history'] = kept_history
                     
-                # 2. 현재 작업 삭제 확인
                 curr_p = m.get('p_name', '---')
                 if curr_p != '---':
                     status_text = f"🔄[{_('생산중')}]" if m.get('is_running', False) else f"⏸️[{_('대기중')}]"
                     if int(m.get('count', 0)) >= int(m.get('target', 1)): status_text = f"✅[{_('생산완료')}]"
-                    c_str = f"{status_text} {curr_p} ({int(m.get('count',0))}/{m.get('target')}EA)"
+                    p_info = st.session_state.master_data.get(curr_p, {})
+                    c_txt = p_info.get('color_text', '')
+                    c_str = f"[{c_txt}] " if c_txt else ""
+                    kg = (p_info.get('weight', 0.0) * int(m.get('target', 1))) / 1000.0
+                    c_str_match = f"{status_text} {curr_p} {c_str}({int(m.get('count',0))}/{m.get('target')}EA / {kg:,.1f}kg)"
                     
-                    if c_str in edited_cells:
-                        edited_cells.remove(c_str)
+                    if c_str_match in edited_cells:
+                        edited_cells.remove(c_str_match)
                     else:
                         m['p_name'] = "---"; m['target'] = 1000; m['count'] = 0; m['is_running'] = False
                         changes = True
                         
-                # 3. 대기열(예정) 삭제 확인
                 kept_schedule = []
                 for sch in m.get('schedule', []):
-                    s_str = f"⏳[{_('예정')}] {sch['p_name']} ({sch['target']}EA)"
+                    p_info = st.session_state.master_data.get(sch['p_name'], {})
+                    c_txt = p_info.get('color_text', '')
+                    c_str = f"[{c_txt}] " if c_txt else ""
+                    kg = (p_info.get('weight', 0.0) * sch['target']) / 1000.0
+                    s_str = f"⏳[{_('예정')}] {sch['p_name']} {c_str}({sch['target']}EA / {kg:,.1f}kg)"
+                    
                     if s_str in edited_cells:
                         kept_schedule.append(sch)
                         edited_cells.remove(s_str)
                 if len(kept_schedule) != len(m.get('schedule', [])): changes = True
                 m['schedule'] = kept_schedule
                 
-                # 4. 새롭게 추가된 작업들 등록 (코드 치고 엔터친 부분)
+                # 새롭게 추가된 코드 반영
                 for cell_val in edited_cells:
                     if not any(marker in cell_val for marker in ["✅", "🔄", "⏸️", "⏳"]):
                         typed_str = cell_val; target_qty = 1000 
