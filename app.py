@@ -19,7 +19,7 @@ ADMIN_PASSWORD = "1234"
 
 # -------------------------------------------------------------
 # [매우 중요!] 아래 따옴표 안에 본인의 구글 시트 ID를 복사해서 넣으세요.
-SHEET_ID = '1iBTSX73dPtO8dDkq33DaS1-t-7oaZPnlGQlQu-90vP8' 
+SHEET_ID = '1gDcLsO5PBfpG_9JCAWOWol_gJgubRU90STsZHGv9hq4' 
 # -------------------------------------------------------------
 
 # --- 💡 완벽한 다국어(번역) 딕셔너리 ---
@@ -765,3 +765,4 @@ if auto_refresh:
         """,
         height=0, width=0
     )
+
