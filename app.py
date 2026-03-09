@@ -1,5 +1,5 @@
 import streamlit as st
-import streamlit.components.v1 as components # 👈 화면 얼림 방지용 투명 로봇 부품 추가
+import streamlit.components.v1 as components
 import pandas as pd
 import time
 import os
@@ -41,7 +41,7 @@ LANG_DICT = {
     "🏢 1층 생산라인": "🏢 1階 生産ライン", "🏢 3층 생산라인": "🏢 3階 生産ライン",
     "📅 공정계획표": "📅 工程計画表", "⚙️ 기준 정보 관리": "⚙️ 基準情報管理",
     "🔄 실시간 동기화 (PC ↔ 폰 상태 맞추기)": "🔄 リアルタイム同期 (PC ↔ スマホ)",
-    "시스템 설정": "시스템設定", "실시간 자동 새로고침 켜기": "自動更新をオンにする",
+    "시스템 설정": "システム設定", "실시간 자동 새로고침 켜기": "自動更新をオンにする",
     "🔄 최신 데이터 동기화 (Sync)": "🔄 最新データ同期 (Sync)",
     "※ 1층 도면 배치도에 포함되지 않은 기계들": "※ 1階配置図に含まれていない機械",
     "스마트 공정 계획표 (엑셀 뷰)": "スマート工程計画表 (Excel View)",
@@ -53,21 +53,18 @@ LANG_DICT = {
     "변경된 내용이 없습니다.": "変更された内容がありません。",
     "✅ 일정이 자동 추가되었습니다!": "✅ 日程が自動追加されました！",
     "로그인": "ログイン", "🔓 로그아웃": "🔓 ログアウト", "제품명 (필수)": "製品名 (必須)",
-    "제품 적용하기": "製品適用", "기계 추가하기": "機械追加", "선택 기계 영구 삭제": "選択機械の完全削除",
+    "기계 추가하기": "機械追加", "선택 기계 영구 삭제": "選択機械の完全削除",
     "기계명": "機械名", "순서": "番目", "완제품코드": "完成品コード", "부품코드": "部品コード",
     "제품명": "製品名", "컬러": "カラー", "무게(g)": "重量(g)", "사이클속도(초)": "サイクル速度(秒)",
-    "사이클(초)": "サイクル(秒)", "컬러 텍스트 (예: 투명)": "カラーテキスト (例: 透明)",
-    "삭제할 제품 선택": "削除する製品を選択", "선택 제품 영구 삭제": "選択した製品を完全に削除",
+    "사이클(초)": "サイクル(秒)",
     "기계 이름 (예: E-IN 851AD)": "機械名 (例: E-IN 851AD)", "설치 층수": "設置階",
-    "철거/삭제할 기계 선택": "撤去/削除する機械を選択", "➕ 제품 등록 및 수정": "➕ 製品の登録と修正",
+    "철거/삭제할 기계 선택": "撤去/削除する機械を選択",
     "➕ 새 기계 라인 추가": "➕ 新しい機械ラインの追加", "Password": "パスワード",
     "📋 제품 목록 (Product List)": "📋 製品リスト (Product List)",
-    "📦 Master Data": "📦 マスターデータ (Master Data)",
+    "📦 Master Data (기준 정보 관리)": "📦 マスターデータ (基準情報管理)",
     "완료": "完了", "예정": "予定", "완": "完", "부": "部",
     "🔒 데이터를 수정하려면 관리자 권한이 필요합니다.": "🔒 データを修正するには管理者権限が必要です。",
-    "📲 슬랙": "📲 Slack",
-    "⚠️ 스트림릿 Secrets에 SLACK_WEBHOOK_URL을 설정해주세요.": "⚠️ Streamlit SecretsにSLACK_WEBHOOK_URLを設定してください。",
-    "슬랙 알림 전송 완료!": "Slack通知を送信しました！"
+    "📲 슬랙": "📲 Slack"
 }
 
 def _(text):
@@ -75,12 +72,11 @@ def _(text):
         return LANG_DICT.get(text, text)
     return text
 
-# --- 💡 슬랙 통신 함수 ---
 def send_slack_webhook(m_name, p_name, count):
     try:
         webhook_url = st.secrets.get("SLACK_WEBHOOK_URL")
         if not webhook_url:
-            st.warning(_("⚠️ 스트림릿 Secrets에 SLACK_WEBHOOK_URL을 설정해주세요."))
+            st.warning("⚠️ 스트림릿 Secrets에 SLACK_WEBHOOK_URL을 설정해주세요.")
             return
         
         if st.session_state.lang == 'JA':
@@ -93,13 +89,12 @@ def send_slack_webhook(m_name, p_name, count):
         
         with urllib.request.urlopen(req) as response:
             if response.getcode() == 200:
-                st.toast(_("슬랙 알림 전송 완료!"), icon="✅")
+                st.toast("슬랙 알림 전송 완료!", icon="✅")
             else:
                 st.error(f"Slack API Error: {response.getcode()}")
     except Exception as e:
         st.error(f"Slack Error: {e}")
 
-# --- 💡 구글 시트 연동 (초강력 에러 방어 적용) ---
 def get_gspread_client():
     scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
     creds_dict = json.loads(st.secrets["GOOGLE_KEY"])
@@ -114,8 +109,7 @@ def load_machine_data():
         data_list = sheet.get_all_values()
         if len(data_list) <= 1: return {}
         return {row[0]: json.loads(row[1]) for row in data_list[1:] if len(row) >= 2}
-    except Exception as e:
-        return None 
+    except Exception as e: return None 
 
 def save_machine_data(data):
     try:
@@ -126,8 +120,7 @@ def save_machine_data(data):
         rows = [["Key", "Value"]] + [[str(k), json.dumps(v)] for k, v in data.items()]
         sheet.clear()
         sheet.update(values=rows, range_name="A1")
-    except Exception as e:
-        st.error(f"🚨 기계 DB 저장 에러: {e}")
+    except Exception as e: st.error(f"🚨 기계 DB 저장 에러: {e}")
 
 def load_master_data():
     try:
@@ -137,8 +130,7 @@ def load_master_data():
         data_list = sheet.get_all_values()
         if len(data_list) <= 1: return {}
         return {row[0]: json.loads(row[1]) for row in data_list[1:] if len(row) >= 2}
-    except:
-        return None
+    except: return None
 
 def save_master_data(data):
     try:
@@ -149,8 +141,7 @@ def save_master_data(data):
         rows = [["Key", "Value"]] + [[str(k), json.dumps(v)] for k, v in data.items()]
         sheet.clear()
         sheet.update(values=rows, range_name="A1")
-    except Exception as e:
-        st.error(f"🚨 마스터 DB 저장 에러: {e}")
+    except Exception as e: st.error(f"🚨 마스터 DB 저장 에러: {e}")
 
 def clear_widget_state(m_name=None):
     if m_name:
@@ -163,7 +154,6 @@ def toggle_machine_details(m_name):
     else:
         st.session_state.selected_machine = m_name
 
-# --- 1. 정밀 타겟팅 CSS 디자인 ---
 st.markdown("""
 <style>
 .stApp, .stApp > div, [data-testid="stAppViewContainer"], [data-testid="stMain"], [data-testid="stAppViewBlockContainer"], [data-testid="stMainBlockContainer"] {
@@ -174,7 +164,6 @@ display: none !important; opacity: 0 !important; visibility: hidden !important;
 }
 .stApp { background-color: #fbfbfd; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #1d1d1f; }
 .modern-header { font-size: 28px; font-weight: 700; color: #1d1d1f; margin-bottom: 10px; padding-top: 20px; letter-spacing: -0.5px; }
-
 .machine-title { font-size: 20px; font-weight: 800; color: #1d1d1f; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
 .status-container { display: flex; align-items: center; gap: 6px; background: #f5f5f7; padding: 4px 12px; border-radius: 20px; }
 .status-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
@@ -194,15 +183,8 @@ display: none !important; opacity: 0 !important; visibility: hidden !important;
 .history-item { background: #fbfbfd; border: 1px solid #e5e5ea; padding: 10px; margin-bottom: 6px; border-radius: 10px; font-size: 13px; color: #86868b; }
 
 @media (max-width: 768px) {
-    div[data-testid="stHorizontalBlock"]:has(.grid-marker) {
-        flex-direction: row !important;
-        flex-wrap: nowrap !important;
-        gap: 0.3rem !important;
-    }
-    div[data-testid="stHorizontalBlock"]:has(.grid-marker) > div[data-testid="column"] {
-        width: 50% !important;
-        min-width: 50% !important;
-    }
+    div[data-testid="stHorizontalBlock"]:has(.grid-marker) { flex-direction: row !important; flex-wrap: nowrap !important; gap: 0.3rem !important; }
+    div[data-testid="stHorizontalBlock"]:has(.grid-marker) > div[data-testid="column"] { width: 50% !important; min-width: 50% !important; }
     .machine-title { font-size: 15px !important; margin-bottom: 5px !important; }
     .status-container { padding: 2px 6px !important; }
     .status-text { font-size: 10px !important; }
@@ -270,8 +252,7 @@ if not st.session_state.m_states:
     for m_name in default_machines:
         st.session_state.m_states[m_name] = {'count': 0, 'last_time': time.time(), 'is_running': False, 'p_name': "---", 'target': 1000, 'schedule': [], 'history': [], 'floor': get_floor_from_machine(m_name), 'memo': ""}
 
-if 'selected_machine' not in st.session_state:
-    st.session_state.selected_machine = None
+if 'selected_machine' not in st.session_state: st.session_state.selected_machine = None
 
 def render_unified_machine_card(m_name):
     now = time.time()
@@ -462,7 +443,6 @@ def render_unified_machine_card(m_name):
                             save_machine_data(st.session_state.m_states); time.sleep(1); st.rerun()
                 if st.button(_("🗑️ 모두 지우기"), key=f"clear_hist_{m_name}", use_container_width=True): m['history'] = []; save_machine_data(st.session_state.m_states); st.rerun()
 
-# --- 사이드바 설정 ---
 with st.sidebar:
     st.markdown(f"### ⚙️ {_('시스템 설정')}")
     lang_mode = st.radio("🌐 언어 / 言語", ["🇰🇷 한국어", "🇯🇵 日本語"], horizontal=True)
@@ -503,13 +483,11 @@ with t1:
         ("655", "556"), ("656", "555")
     ]
     layout_all_set = set()
-
     def find_real_name(target_num_str):
         for m_name in f1_machines:
             extracted_nums = re.findall(r'\d+', m_name) 
             if target_num_str in extracted_nums: return m_name
         return None
-
     for left_num, right_num in f1_layout_pairs:
         real_left_m = find_real_name(left_num)
         real_right_m = find_real_name(right_num)
@@ -544,7 +522,6 @@ with t3:
         st.markdown("<span class='grid-marker'></span>", unsafe_allow_html=True)
         for m_name in f3_machines[mid3:]: render_unified_machine_card(m_name)
 
-# --- 💡 공정계획표 탭 ---
 with t_plan:
     st.subheader(f"📅 {_('스마트 공정 계획표 (엑셀 뷰)')}")
     hide_history = st.checkbox(_("☑️ 완료된 공정 기록 숨기기 (진행/예정 항목만 앞으로 당겨서 보기)"), value=True)
@@ -555,7 +532,6 @@ with t_plan:
         max_cols = 0; raw_table_data = []
         for m_name in machines_list:
             m = st.session_state.m_states[m_name]; tasks = []
-            
             if not hide_hist:
                 for h in m.get('history', []):
                     p_info = st.session_state.master_data.get(h['p_name'], {})
@@ -563,7 +539,6 @@ with t_plan:
                     c_str = f"[{c_txt}] " if c_txt else ""
                     kg = (p_info.get('weight', 0.0) * h['count']) / 1000.0
                     tasks.append(f"✅[{_('완료')}] {h['p_name']} {c_str}({h['count']}EA / {kg:,.1f}kg)")
-                    
             curr_p = m.get('p_name', '---')
             if curr_p != '---':
                 status_text = f"🔄[{_('생산중')}]" if m.get('is_running', False) else f"⏸️[{_('대기중')}]"
@@ -573,7 +548,6 @@ with t_plan:
                 c_str = f"[{c_txt}] " if c_txt else ""
                 kg = (p_info.get('weight', 0.0) * int(m.get('target', 1))) / 1000.0
                 tasks.append(f"{status_text} {curr_p} {c_str}({int(m.get('count',0))}/{m.get('target')}EA / {kg:,.1f}kg)")
-                
             for sch in m.get('schedule', []):
                 p_info = st.session_state.master_data.get(sch['p_name'], {})
                 c_txt = p_info.get('color_text', '')
@@ -605,7 +579,6 @@ with t_plan:
                 m_name = str(row.get(_('기계명'), ''))
                 if m_name not in st.session_state.m_states: continue
                 m = st.session_state.m_states[m_name]
-                
                 edited_cells = [str(row[col]).strip() for col in e_df.columns if col != _('기계명') and str(row[col]).strip() != ""]
                 
                 if not hide_history:
@@ -632,9 +605,7 @@ with t_plan:
                     c_str = f"[{c_txt}] " if c_txt else ""
                     kg = (p_info.get('weight', 0.0) * int(m.get('target', 1))) / 1000.0
                     c_str_match = f"{status_text} {curr_p} {c_str}({int(m.get('count',0))}/{m.get('target')}EA / {kg:,.1f}kg)"
-                    
-                    if c_str_match in edited_cells:
-                        edited_cells.remove(c_str_match)
+                    if c_str_match in edited_cells: edited_cells.remove(c_str_match)
                     else:
                         m['p_name'] = "---"; m['target'] = 1000; m['count'] = 0; m['is_running'] = False
                         changes = True
@@ -646,7 +617,6 @@ with t_plan:
                     c_str = f"[{c_txt}] " if c_txt else ""
                     kg = (p_info.get('weight', 0.0) * sch['target']) / 1000.0
                     s_str = f"⏳[{_('예정')}] {sch['p_name']} {c_str}({sch['target']}EA / {kg:,.1f}kg)"
-                    
                     if s_str in edited_cells:
                         kept_schedule.append(sch)
                         edited_cells.remove(s_str)
@@ -661,7 +631,6 @@ with t_plan:
                             typed_str = parts[0].strip()
                             try: target_qty = int(parts[1].strip())
                             except: pass
-                            
                         matched_p_name = None
                         for p, info in st.session_state.master_data.items():
                             if info.get('p_code') == typed_str or info.get('p_part_code') == typed_str: 
@@ -688,6 +657,7 @@ with t_plan:
         else:
             st.info(_("변경된 내용이 없습니다."))
 
+# --- 💡 관리자 탭 (마스터 데이터 엑셀식 편집기로 전면 교체!) ---
 with t_admin:
     st.subheader(f"⚙️ {_('시스템 설정')}")
     if not st.session_state.is_admin:
@@ -698,43 +668,53 @@ with t_admin:
             if st.button(_("로그인")):
                 if pwd == ADMIN_PASSWORD: st.session_state.is_admin = True; st.success("OK"); time.sleep(0.5); st.rerun()
         st.write("---"); st.markdown(f"#### {_('📋 제품 목록 (Product List)')}")
-        master_list = [{_("완제품코드"): info.get("p_code", ""), _("부품코드"): info.get("p_part_code", ""), _("제품명"): p_name, _("컬러"): info.get("color_text", ""), _("무게(g)"): info.get("weight", 0.0), _("사이클속도(초)"): info.get("cycle_time", 10)} for p_name, info in st.session_state.master_data.items()]
+        master_list = [{_("제품명"): p_name, _("완제품코드"): info.get("p_code", ""), _("부품코드"): info.get("p_part_code", ""), _("컬러"): info.get("color_text", ""), _("무게(g)"): info.get("weight", 0.0), _("사이클속도(초)"): info.get("cycle_time", 10)} for p_name, info in st.session_state.master_data.items() if p_name != "---"]
         st.dataframe(pd.DataFrame(master_list), use_container_width=True)
     else:
         if st.button(_("🔓 로그아웃")): st.session_state.is_admin = False; st.rerun()
         st.write("---")
         
-        st.markdown(f"#### {_('📦 Master Data')}")
-        with st.expander(_("➕ 제품 등록 및 수정"), expanded=True):
-            col_m1, col_m2, col_m3 = st.columns(3)
-            with col_m1: a_p_code = st.text_input(_("완제품코드"))
-            with col_m2: a_p_part_code = st.text_input(_("부품코드"))
-            with col_m3: a_p_name = st.text_input(_("제품명 (필수)"))
-            
-            col_m4, col_m5, col_m6 = st.columns(3)
-            with col_m4: a_p_color = st.text_input(_("컬러 텍스트 (예: 투명)"))
-            with col_m5: a_p_number = st.number_input(_("무게(g)"), min_value=0.0, value=0.0, step=0.1)
-            with col_m6: a_p_cycle = st.number_input(_("사이클(초)"), min_value=0, value=10)
-            
-            if st.button(_("제품 적용하기")):
-                if a_p_name.strip(): 
-                    st.session_state.master_data[a_p_name] = {"p_code": a_p_code, "p_part_code": a_p_part_code, "color_text": a_p_color, "weight": a_p_number, "cycle_time": a_p_cycle}
-                    save_master_data(st.session_state.master_data)
-                    st.success("OK")
-                    time.sleep(1)
-                    st.rerun()
-                
-        st.write("---")
-        master_list = [{_("완제품코드"): info.get("p_code", ""), _("부품코드"): info.get("p_part_code", ""), _("제품명"): p_name, _("컬러"): info.get("color_text", ""), _("무게(g)"): info.get("weight", 0.0), _("사이클(초)"): info.get("cycle_time", 10)} for p_name, info in st.session_state.master_data.items()]
-        st.dataframe(pd.DataFrame(master_list), use_container_width=True)
+        st.markdown(f"#### {_('📦 Master Data (기준 정보 관리)')}")
+        st.info("💡 **엑셀처럼 표 안의 글씨를 더블클릭해서 바로 수정하세요!** 맨 아래 빈 줄을 클릭해 새 제품을 추가하거나, 맨 왼쪽 네모 박스를 체크하고 키보드 `Delete`를 눌러 삭제할 수도 있습니다.")
         
+        # 편집용 데이터 만들기
+        edit_master_list = []
+        for p_name, info in st.session_state.master_data.items():
+            if p_name == "---": continue
+            edit_master_list.append({
+                _("제품명 (필수)"): p_name,
+                _("완제품코드"): info.get("p_code", ""),
+                _("부품코드"): info.get("p_part_code", ""),
+                _("컬러"): info.get("color_text", ""),
+                _("무게(g)"): float(info.get("weight", 0.0)),
+                _("사이클(초)"): int(info.get("cycle_time", 10))
+            })
+        
+        df_master = pd.DataFrame(edit_master_list)
+        # 엑셀식 데이터 에디터 적용 (자유롭게 추가/삭제/수정 가능)
+        edited_df_master = st.data_editor(df_master, num_rows="dynamic", use_container_width=True, key="editor_master")
+        
+        if st.button("💾 수정된 마스터 데이터 저장", use_container_width=True):
+            new_master = {"---": {"p_code": "-", "p_part_code": "-", "color_text": "-", "weight": 0.0, "cycle_time": 0}}
+            for idx, row in edited_df_master.iterrows():
+                p_name = str(row.get(_("제품명 (필수)"), "")).strip()
+                if not p_name or p_name.lower() == 'nan': continue
+                new_master[p_name] = {
+                    "p_code": str(row.get(_("완제품코드"), "")).strip(),
+                    "p_part_code": str(row.get(_("부품코드"), "")).strip(),
+                    "color_text": str(row.get(_("컬러"), "")).strip(),
+                    "weight": float(row.get(_("무게(g)"), 0.0) if pd.notna(row.get(_("무게(g)"))) else 0.0),
+                    "cycle_time": int(row.get(_("사이클(초)"), 10) if pd.notna(row.get(_("사이클(초)"))) else 10)
+                }
+            st.session_state.master_data = new_master
+            save_master_data(new_master)
+            st.success("✅ 마스터 데이터가 성공적으로 저장되었습니다!")
+            time.sleep(1)
+            st.rerun()
+            
         st.write("---")
         col_admin1, col_admin2 = st.columns(2)
         with col_admin1:
-            del_p_name = st.selectbox(_("삭제할 제품 선택"), list(st.session_state.master_data.keys()))
-            if st.button(_("선택 제품 영구 삭제")):
-                if del_p_name != "---": del st.session_state.master_data[del_p_name]; save_master_data(st.session_state.master_data); st.success("OK"); time.sleep(1); st.rerun()
-        with col_admin2:
             with st.expander(_("➕ 새 기계 라인 추가"), expanded=False):
                 new_m_name = st.text_input(_("기계 이름 (예: E-IN 851AD)"))
                 new_m_floor = st.radio(_("설치 층수"), ["F1", "F3"], horizontal=True)
@@ -749,10 +729,15 @@ with t_admin:
                         st.success("OK")
                         time.sleep(1)
                         st.rerun()
+        with col_admin2:
             del_m_name = st.selectbox(_("철거/삭제할 기계 선택"), list(st.session_state.m_states.keys()))
-            if st.button(_("선택 기계 영구 삭제")): del st.session_state.m_states[del_m_name]; save_machine_data(st.session_state.m_states); st.success("OK"); time.sleep(1); st.rerun()
+            if st.button(_("선택 기계 영구 삭제")): 
+                del st.session_state.m_states[del_m_name]
+                save_machine_data(st.session_state.m_states)
+                st.success("OK")
+                time.sleep(1)
+                st.rerun()
 
-# --- 💡 무식한 Sleep 대신, 투명 로봇이 동기화 버튼을 대신 눌러주도록 변경! ---
 if auto_refresh:
     components.html(
         """
@@ -765,7 +750,7 @@ if auto_refresh:
                     break;
                 }
             }
-        }, 15000); // 15초마다 실행
+        }, 15000);
         </script>
         """,
         height=0, width=0
