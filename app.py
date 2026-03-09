@@ -98,7 +98,7 @@ def send_slack_webhook(m_name, p_name, count):
     except Exception as e:
         st.error(f"Slack Error: {e}")
 
-# --- 💡 구글 시트 연동 ---
+# --- 💡 구글 시트 연동 (초강력 에러 방어 적용) ---
 def get_gspread_client():
     scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
     creds_dict = json.loads(st.secrets["GOOGLE_KEY"])
@@ -113,10 +113,13 @@ def load_machine_data():
         data_list = sheet.get_all_values()
         if len(data_list) <= 1: return {}
         return {row[0]: json.loads(row[1]) for row in data_list[1:] if len(row) >= 2}
-    except Exception as e: return {}
+    except Exception as e:
+        # 에러 발생 시 빈 데이터({})로 덮어쓰지 않고 None을 반환하여 기존 데이터를 보호합니다!
+        return None 
 
 def save_machine_data(data):
     try:
+        if not data: return # 데이터가 비어있으면 아예 저장을 막습니다! (치명적 오류 차단)
         client = get_gspread_client()
         sh = client.open_by_key(SHEET_ID)
         sheet = sh.worksheet("Machine_DB")
@@ -125,7 +128,6 @@ def save_machine_data(data):
         sheet.update(values=rows, range_name="A1")
     except Exception as e:
         st.error(f"🚨 기계 DB 저장 에러: {e}")
-        st.stop()
 
 def load_master_data():
     try:
@@ -135,10 +137,12 @@ def load_master_data():
         data_list = sheet.get_all_values()
         if len(data_list) <= 1: return {}
         return {row[0]: json.loads(row[1]) for row in data_list[1:] if len(row) >= 2}
-    except: return {}
+    except:
+        return None # 에러 방어
 
 def save_master_data(data):
     try:
+        if not data: return
         client = get_gspread_client()
         sh = client.open_by_key(SHEET_ID)
         sheet = sh.worksheet("Master_DB")
@@ -147,14 +151,12 @@ def save_master_data(data):
         sheet.update(values=rows, range_name="A1")
     except Exception as e:
         st.error(f"🚨 마스터 DB 저장 에러: {e}")
-        st.stop()
 
 def clear_widget_state(m_name=None):
     if m_name:
         for k in [f"det_p_{m_name}", f"det_t_{m_name}", f"det_c_{m_name}", f"det_memo_{m_name}"]:
             if k in st.session_state: del st.session_state[k]
 
-# --- 💡 모바일 터치 에러(깜빡임) 방지 콜백 함수 추가! ---
 def toggle_machine_details(m_name):
     if st.session_state.selected_machine == m_name:
         st.session_state.selected_machine = None
@@ -191,7 +193,6 @@ display: none !important; opacity: 0 !important; visibility: hidden !important;
 .schedule-item { background: #fbfbfd; border: 1px solid #e5e5ea; padding: 10px; margin-bottom: 6px; border-radius: 10px; font-size: 13px; font-weight: 500;}
 .history-item { background: #fbfbfd; border: 1px solid #e5e5ea; padding: 10px; margin-bottom: 6px; border-radius: 10px; font-size: 13px; color: #86868b; }
 
-/* 📱 모바일 강제 2열 최적화 (버튼 박스 깨짐 완벽 방지) */
 @media (max-width: 768px) {
     div[data-testid="stHorizontalBlock"]:has(.grid-marker) {
         flex-direction: row !important;
@@ -217,8 +218,12 @@ display: none !important; opacity: 0 !important; visibility: hidden !important;
 
 if 'is_admin' not in st.session_state: st.session_state.is_admin = False
 
+# --- 데이터 초기화 (네트워크 오류 방어벽 추가) ---
 if 'master_data' not in st.session_state:
     loaded_master = load_master_data()
+    if loaded_master is None:
+        st.error("🚨 통신 에러: 새로고침을 눌러주세요.")
+        st.stop()
     if not loaded_master:
         loaded_master = {"---": {"p_code": "-", "p_part_code": "-", "color_text": "-", "weight": 0.0, "cycle_time": 0}}
         save_master_data(loaded_master)
@@ -240,6 +245,10 @@ def get_machine_sort_key(m_name):
 
 if 'm_states' not in st.session_state:
     loaded_data = load_machine_data()
+    if loaded_data is None:
+        st.error("🚨 통신 에러: 잠시 후 다시 시도해주세요.")
+        st.stop()
+        
     for k, v in loaded_data.items():
         if 'floor' not in v: v['floor'] = get_floor_from_machine(k)
         raw_memo = v.get('memo', '')
@@ -375,7 +384,6 @@ def render_unified_machine_card(m_name):
                 if st.button(_("⏸️ STOP"), key=f"stop_{m_name}", use_container_width=True):
                     m['is_running'] = False; save_machine_data(st.session_state.m_states); st.rerun()
         
-        # 💡 깜빡임 방지! 1회성 콜백(on_click) 방식으로 더보기 버튼 교체
         btn_text = _("🔼 닫기") if is_open else _("🔽 더보기")
         st.button(btn_text, key=f"det_toggle_{m_name}", on_click=toggle_machine_details, args=(m_name,), use_container_width=True)
 
@@ -469,15 +477,20 @@ with st.sidebar:
     auto_refresh = st.checkbox(_("실시간 자동 새로고침 켜기"), value=True)
     st.markdown("---")
     if st.button(_("🔄 최신 데이터 동기화 (Sync)")):
-        st.session_state.m_states = load_machine_data()
-        st.session_state.master_data = load_master_data()
+        # 데이터가 정상일 때만 덮어쓰도록 안전장치 적용
+        new_m = load_machine_data()
+        new_master = load_master_data()
+        if new_m is not None: st.session_state.m_states = new_m
+        if new_master is not None: st.session_state.master_data = new_master
         st.rerun()
 
 st.markdown("<div class='modern-header'>🤖 Factory OS: Production Line</div>", unsafe_allow_html=True)
 
 if st.button(_("🔄 실시간 동기화 (PC ↔ 폰 상태 맞추기)"), use_container_width=True):
-    st.session_state.m_states = load_machine_data()
-    st.session_state.master_data = load_master_data()
+    new_m = load_machine_data()
+    new_master = load_master_data()
+    if new_m is not None: st.session_state.m_states = new_m
+    if new_master is not None: st.session_state.master_data = new_master
     st.rerun()
 
 t1, t3, t_plan, t_admin = st.tabs([_("🏢 1층 생산라인"), _("🏢 3층 생산라인"), _("📅 공정계획표"), _("⚙️ 기준 정보 관리")])
@@ -741,8 +754,11 @@ with t_admin:
             del_m_name = st.selectbox(_("철거/삭제할 기계 선택"), list(st.session_state.m_states.keys()))
             if st.button(_("선택 기계 영구 삭제")): del st.session_state.m_states[del_m_name]; save_machine_data(st.session_state.m_states); st.success("OK"); time.sleep(1); st.rerun()
 
+# --- 자동 동기화에도 방어벽 적용! ---
 if auto_refresh:
     time.sleep(15.0) 
-    st.session_state.m_states = load_machine_data()
-    st.session_state.master_data = load_master_data()
+    new_m = load_machine_data()
+    new_master = load_master_data()
+    if new_m is not None: st.session_state.m_states = new_m
+    if new_master is not None: st.session_state.master_data = new_master
     st.rerun()
