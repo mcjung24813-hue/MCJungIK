@@ -1,4 +1,5 @@
 import streamlit as st
+import streamlit.components.v1 as components # 👈 화면 얼림 방지용 투명 로봇 부품 추가
 import pandas as pd
 import time
 import os
@@ -40,7 +41,7 @@ LANG_DICT = {
     "🏢 1층 생산라인": "🏢 1階 生産ライン", "🏢 3층 생산라인": "🏢 3階 生産ライン",
     "📅 공정계획표": "📅 工程計画表", "⚙️ 기준 정보 관리": "⚙️ 基準情報管理",
     "🔄 실시간 동기화 (PC ↔ 폰 상태 맞추기)": "🔄 リアルタイム同期 (PC ↔ スマホ)",
-    "시스템 설정": "システム設定", "실시간 자동 새로고침 켜기": "自動更新をオンにする",
+    "시스템 설정": "시스템設定", "실시간 자동 새로고침 켜기": "自動更新をオンにする",
     "🔄 최신 데이터 동기화 (Sync)": "🔄 最新データ同期 (Sync)",
     "※ 1층 도면 배치도에 포함되지 않은 기계들": "※ 1階配置図に含まれていない機械",
     "스마트 공정 계획표 (엑셀 뷰)": "スマート工程計画表 (Excel View)",
@@ -114,12 +115,11 @@ def load_machine_data():
         if len(data_list) <= 1: return {}
         return {row[0]: json.loads(row[1]) for row in data_list[1:] if len(row) >= 2}
     except Exception as e:
-        # 에러 발생 시 빈 데이터({})로 덮어쓰지 않고 None을 반환하여 기존 데이터를 보호합니다!
         return None 
 
 def save_machine_data(data):
     try:
-        if not data: return # 데이터가 비어있으면 아예 저장을 막습니다! (치명적 오류 차단)
+        if not data: return
         client = get_gspread_client()
         sh = client.open_by_key(SHEET_ID)
         sheet = sh.worksheet("Machine_DB")
@@ -138,7 +138,7 @@ def load_master_data():
         if len(data_list) <= 1: return {}
         return {row[0]: json.loads(row[1]) for row in data_list[1:] if len(row) >= 2}
     except:
-        return None # 에러 방어
+        return None
 
 def save_master_data(data):
     try:
@@ -218,11 +218,10 @@ display: none !important; opacity: 0 !important; visibility: hidden !important;
 
 if 'is_admin' not in st.session_state: st.session_state.is_admin = False
 
-# --- 데이터 초기화 (네트워크 오류 방어벽 추가) ---
 if 'master_data' not in st.session_state:
     loaded_master = load_master_data()
     if loaded_master is None:
-        st.error("🚨 통신 에러: 새로고침을 눌러주세요.")
+        st.error("🚨 통신 중입니다. 새로고침을 눌러주세요.")
         st.stop()
     if not loaded_master:
         loaded_master = {"---": {"p_code": "-", "p_part_code": "-", "color_text": "-", "weight": 0.0, "cycle_time": 0}}
@@ -246,7 +245,7 @@ def get_machine_sort_key(m_name):
 if 'm_states' not in st.session_state:
     loaded_data = load_machine_data()
     if loaded_data is None:
-        st.error("🚨 통신 에러: 잠시 후 다시 시도해주세요.")
+        st.error("🚨 통신 중입니다. 새로고침을 눌러주세요.")
         st.stop()
         
     for k, v in loaded_data.items():
@@ -477,7 +476,6 @@ with st.sidebar:
     auto_refresh = st.checkbox(_("실시간 자동 새로고침 켜기"), value=True)
     st.markdown("---")
     if st.button(_("🔄 최신 데이터 동기화 (Sync)")):
-        # 데이터가 정상일 때만 덮어쓰도록 안전장치 적용
         new_m = load_machine_data()
         new_master = load_master_data()
         if new_m is not None: st.session_state.m_states = new_m
@@ -754,11 +752,21 @@ with t_admin:
             del_m_name = st.selectbox(_("철거/삭제할 기계 선택"), list(st.session_state.m_states.keys()))
             if st.button(_("선택 기계 영구 삭제")): del st.session_state.m_states[del_m_name]; save_machine_data(st.session_state.m_states); st.success("OK"); time.sleep(1); st.rerun()
 
-# --- 자동 동기화에도 방어벽 적용! ---
+# --- 💡 무식한 Sleep 대신, 투명 로봇이 동기화 버튼을 대신 눌러주도록 변경! ---
 if auto_refresh:
-    time.sleep(15.0) 
-    new_m = load_machine_data()
-    new_master = load_master_data()
-    if new_m is not None: st.session_state.m_states = new_m
-    if new_master is not None: st.session_state.master_data = new_master
-    st.rerun()
+    components.html(
+        """
+        <script>
+        setTimeout(function() {
+            const buttons = window.parent.document.querySelectorAll('button');
+            for (let i = 0; i < buttons.length; i++) {
+                if (buttons[i].innerText.includes('Sync') || buttons[i].innerText.includes('동기화')) {
+                    buttons[i].click();
+                    break;
+                }
+            }
+        }, 15000); // 15초마다 실행
+        </script>
+        """,
+        height=0, width=0
+    )
