@@ -19,7 +19,7 @@ ADMIN_PASSWORD = "1234"
 
 # -------------------------------------------------------------
 # [매우 중요!] 아래 따옴표 안에 본인의 구글 시트 ID를 복사해서 넣으세요.
-SHEET_ID = '1gDcLsO5PBfpG_9JCAWOWol_gJgubRU90STsZHGv9hq4' 
+SHEET_ID = '1iBTSX73dPtO8dDkq33DaS1-t-7oaZPnlGQlQu-90vP8' 
 # -------------------------------------------------------------
 
 # --- 💡 완벽한 다국어(번역) 딕셔너리 ---
@@ -35,6 +35,7 @@ LANG_DICT = {
     "⚙️ 현재 제품 및 수량 설정": "⚙️ 現在の製品及び数量設定",
     "현재 제품": "現在の製品", "목표 수량": "目標数量", "현재 생산량": "現在の生産量",
     "설정 적용": "適用", "수량 리셋": "数量リセット", "⏭️ 당겨오기": "⏭️ 前倒し",
+    "🗑️ 비우기": "🗑️ 空にする",
     "📋 대기열": "📋 待機列", "✅ 완료 내역": "✅ 完了履歴", "🗑️ 모두 지우기": "🗑️ 全て消去",
     "대기 일정이 없습니다.": "待機日程がありません。", "아직 내역이 없습니다.": "まだ履歴がありません。",
     "장착 완료!": "装着完了!", "대기열 추가 완료": "待機列に追加完了",
@@ -391,22 +392,34 @@ def render_unified_machine_card(m_name):
             with col_c: new_count = st.number_input(_("현재 생산량"), min_value=0, value=int(m.get('count', 0)), key=f"det_c_{m_name}")
             
             st.markdown("<br>", unsafe_allow_html=True)
-            if st.button(_("설정 적용"), key=f"det_upd_p_{m_name}", use_container_width=True):
-                m['p_name'] = selected_p_name; m['target'] = new_target; m['count'] = new_count if new_count <= new_target else new_target; m['last_time'] = time.time()
-                clear_widget_state(m_name); save_machine_data(st.session_state.m_states); st.rerun()
-            if st.button(_("수량 리셋"), key=f"det_rst_{m_name}", use_container_width=True):
-                m['count'] = 0; m['last_time'] = time.time()
-                clear_widget_state(m_name); save_machine_data(st.session_state.m_states); st.rerun()
-            if st.button(_("⏭️ 당겨오기"), key=f"det_next_job_{m_name}", use_container_width=True):
-                if m['p_name'] != "---":
-                    if 'history' not in m: m['history'] = []
-                    m['history'].append({'p_name': m['p_name'], 'target': m['target'], 'count': m['count'], 'date': time.strftime("%H:%M")})
-                if m.get('schedule'):
-                    first_job = m['schedule'].pop(0)
-                    m.update({'p_name': first_job['p_name'], 'target': first_job['target'], 'count': 0, 'is_running': False, 'last_time': time.time()})
-                else:
-                    m.update({'p_name': "---", 'target': 1000, 'count': 0, 'is_running': False})
-                clear_widget_state(m_name); save_machine_data(st.session_state.m_states); st.rerun()
+            
+            # --- 💡 모바일 최적화 2열 버튼 배치 (적용/리셋/비우기/당겨오기) ---
+            c_btn_top1, c_btn_top2 = st.columns(2)
+            with c_btn_top1:
+                if st.button(_("설정 적용"), key=f"det_upd_p_{m_name}", use_container_width=True):
+                    m['p_name'] = selected_p_name; m['target'] = new_target; m['count'] = new_count if new_count <= new_target else new_target; m['last_time'] = time.time()
+                    clear_widget_state(m_name); save_machine_data(st.session_state.m_states); st.rerun()
+            with c_btn_top2:
+                if st.button(_("수량 리셋"), key=f"det_rst_{m_name}", use_container_width=True):
+                    m['count'] = 0; m['last_time'] = time.time()
+                    clear_widget_state(m_name); save_machine_data(st.session_state.m_states); st.rerun()
+            
+            c_btn_bot1, c_btn_bot2 = st.columns(2)
+            with c_btn_bot1:
+                if st.button(_("🗑️ 비우기"), key=f"det_clear_{m_name}", use_container_width=True):
+                    m.update({'p_name': "---", 'target': 1000, 'count': 0, 'is_running': False, 'last_time': time.time()})
+                    clear_widget_state(m_name); save_machine_data(st.session_state.m_states); st.rerun()
+            with c_btn_bot2:
+                if st.button(_("⏭️ 당겨오기"), key=f"det_next_job_{m_name}", use_container_width=True):
+                    if m['p_name'] != "---":
+                        if 'history' not in m: m['history'] = []
+                        m['history'].append({'p_name': m['p_name'], 'target': m['target'], 'count': m['count'], 'date': time.strftime("%H:%M")})
+                    if m.get('schedule'):
+                        first_job = m['schedule'].pop(0)
+                        m.update({'p_name': first_job['p_name'], 'target': first_job['target'], 'count': 0, 'is_running': False, 'last_time': time.time()})
+                    else:
+                        m.update({'p_name': "---", 'target': 1000, 'count': 0, 'is_running': False})
+                    clear_widget_state(m_name); save_machine_data(st.session_state.m_states); st.rerun()
 
             st.write("---")
             st.markdown(f"**{_('📋 대기열')}**")
@@ -657,7 +670,6 @@ with t_plan:
         else:
             st.info(_("변경된 내용이 없습니다."))
 
-# --- 💡 관리자 탭 (마스터 데이터 엑셀식 편집기로 전면 교체!) ---
 with t_admin:
     st.subheader(f"⚙️ {_('시스템 설정')}")
     if not st.session_state.is_admin:
@@ -677,7 +689,6 @@ with t_admin:
         st.markdown(f"#### {_('📦 Master Data (기준 정보 관리)')}")
         st.info("💡 **엑셀처럼 표 안의 글씨를 더블클릭해서 바로 수정하세요!** 맨 아래 빈 줄을 클릭해 새 제품을 추가하거나, 맨 왼쪽 네모 박스를 체크하고 키보드 `Delete`를 눌러 삭제할 수도 있습니다.")
         
-        # 편집용 데이터 만들기
         edit_master_list = []
         for p_name, info in st.session_state.master_data.items():
             if p_name == "---": continue
@@ -691,7 +702,6 @@ with t_admin:
             })
         
         df_master = pd.DataFrame(edit_master_list)
-        # 엑셀식 데이터 에디터 적용 (자유롭게 추가/삭제/수정 가능)
         edited_df_master = st.data_editor(df_master, num_rows="dynamic", use_container_width=True, key="editor_master")
         
         if st.button("💾 수정된 마스터 데이터 저장", use_container_width=True):
