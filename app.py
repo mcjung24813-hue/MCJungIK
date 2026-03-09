@@ -8,7 +8,7 @@ import ast
 import json
 import gspread
 import urllib.request
-from oauth2client.service_account import ServiceAccountCredentials # 👈 누락되었던 핵심 라이브러리 추가 완료!
+from oauth2client.service_account import ServiceAccountCredentials
 
 # --- 0. 페이지 설정 ---
 st.set_page_config(layout="wide", page_title="Factory OS - Cloud DB")
@@ -153,6 +153,13 @@ def clear_widget_state(m_name=None):
     if m_name:
         for k in [f"det_p_{m_name}", f"det_t_{m_name}", f"det_c_{m_name}", f"det_memo_{m_name}"]:
             if k in st.session_state: del st.session_state[k]
+
+# --- 💡 모바일 터치 에러(깜빡임) 방지 콜백 함수 추가! ---
+def toggle_machine_details(m_name):
+    if st.session_state.selected_machine == m_name:
+        st.session_state.selected_machine = None
+    else:
+        st.session_state.selected_machine = m_name
 
 # --- 1. 정밀 타겟팅 CSS 디자인 ---
 st.markdown("""
@@ -368,11 +375,9 @@ def render_unified_machine_card(m_name):
                 if st.button(_("⏸️ STOP"), key=f"stop_{m_name}", use_container_width=True):
                     m['is_running'] = False; save_machine_data(st.session_state.m_states); st.rerun()
         
+        # 💡 깜빡임 방지! 1회성 콜백(on_click) 방식으로 더보기 버튼 교체
         btn_text = _("🔼 닫기") if is_open else _("🔽 더보기")
-        if st.button(btn_text, key=f"det_toggle_{m_name}", use_container_width=True):
-            if is_open: st.session_state.selected_machine = None
-            else: st.session_state.selected_machine = m_name
-            st.rerun()
+        st.button(btn_text, key=f"det_toggle_{m_name}", on_click=toggle_machine_details, args=(m_name,), use_container_width=True)
 
         if is_open:
             st.divider() 
@@ -697,12 +702,12 @@ with t_admin:
             
             col_m4, col_m5, col_m6 = st.columns(3)
             with col_m4: a_p_color = st.text_input(_("컬러 텍스트 (예: 투명)"))
-            with col_m5: a_p_weight = st.number_input(_("무게(g)"), min_value=0.0, value=0.0, step=0.1)
+            with col_m5: a_p_number = st.number_input(_("무게(g)"), min_value=0.0, value=0.0, step=0.1)
             with col_m6: a_p_cycle = st.number_input(_("사이클(초)"), min_value=0, value=10)
             
             if st.button(_("제품 적용하기")):
                 if a_p_name.strip(): 
-                    st.session_state.master_data[a_p_name] = {"p_code": a_p_code, "p_part_code": a_p_part_code, "color_text": a_p_color, "weight": a_p_weight, "cycle_time": a_p_cycle}
+                    st.session_state.master_data[a_p_name] = {"p_code": a_p_code, "p_part_code": a_p_part_code, "color_text": a_p_color, "weight": a_p_number, "cycle_time": a_p_cycle}
                     save_master_data(st.session_state.master_data)
                     st.success("OK")
                     time.sleep(1)
